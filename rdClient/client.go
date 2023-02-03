@@ -183,18 +183,20 @@ type RedditPostResponse struct {
 	} `json:"data"`
 }
 
-func Start(config util.Config) error {
-	server := Client{
+func New(config util.Config) (*Client, error) {
+	client := Client{
 		routinePoolSize: runtime.NumCPU(),
 		config:          config,
 	}
 
-	err := server.fetchAccessToken()
+	err := client.fetchAccessToken()
 	if err != nil {
-		return fmt.Errorf("error while fetching reddit access token: %v", err)
+		return &Client{}, fmt.Errorf("error while fetching reddit access token: %v", err)
 	}
 
-	return nil
+	client.scheduleTokenUpdate()
+
+	return &client, nil
 }
 
 // Schedules a reddit token refresh each n seconds, where n = token.ExpiresIn
@@ -209,6 +211,7 @@ func (c *Client) scheduleTokenUpdate() {
 				// Try again in a minute
 				ticker.Reset(60 * time.Second)
 			}
+			log.Println("Successfully updated reddit token")
 			ticker.Reset(c.token.RefreshAt.Sub(time.Now()))
 		}
 	}()
@@ -247,6 +250,7 @@ func (c *Client) fetchRandomPost() error {
 	return nil
 }
 
+// TODO: Implement timeout
 // Fetches the Reddit access token and saves it to Server struct as RedditAccessToken
 func (c *Client) fetchAccessToken() error {
 	paramsReader := strings.NewReader(AuthParam)
