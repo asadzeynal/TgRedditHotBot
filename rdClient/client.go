@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"time"
 )
 
 const AuthUrl = "https://www.reddit.com/api/v1/access_token"
@@ -19,6 +20,7 @@ type RedditAccessToken struct {
 	TokenType   string `json:"token_type"`
 	ExpiresIn   int    `json:"expires_in"`
 	Scope       string `json:"scope"`
+	RefreshAt   time.Time
 }
 
 type Client struct {
@@ -192,8 +194,24 @@ func Start(config util.Config) error {
 		return fmt.Errorf("error while fetching reddit access token: %v", err)
 	}
 
-	server.fetchRandomPost()
 	return nil
+}
+
+// Schedules a reddit token refresh each n seconds, where n = token.ExpiresIn
+func (c *Client) scheduleTokenUpdate() {
+	ticker := time.NewTicker(c.token.RefreshAt.Sub(time.Now()))
+	go func() {
+		for {
+			<-ticker.C
+			err := c.fetchAccessToken()
+			if err != nil {
+				log.Println(err)
+				// Try again in a minute
+				ticker.Reset(60 * time.Second)
+			}
+			ticker.Reset(c.token.RefreshAt.Sub(time.Now()))
+		}
+	}()
 }
 
 func (c *Client) fetchRandomPost() error {
@@ -246,12 +264,14 @@ func (c *Client) fetchAccessToken() error {
 		return fmt.Errorf("error while making request: %v", err)
 	}
 	if res.StatusCode != http.StatusOK {
-		log.Println("error:", res.StatusCode)
+		return fmt.Errorf("failed to fetch refresh token, status code: %v", res.StatusCode)
 	}
 	defer res.Body.Close()
 
 	var token RedditAccessToken
 	err = json.NewDecoder(res.Body).Decode(&token)
+
+	token.RefreshAt = time.Now().Add(time.Duration(token.ExpiresIn-60) * time.Second)
 	if err != nil {
 		return fmt.Errorf("error when processing response: %v", err)
 	}
