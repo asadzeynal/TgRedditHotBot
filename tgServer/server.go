@@ -13,7 +13,7 @@ var (
 	// Universal markup builders.
 	menu = &telebot.ReplyMarkup{ResizeKeyboard: true}
 	// Reply buttons.
-	btnHelp = menu.Text("ℹ Help")
+	btnMorePosts = menu.Text("Give me a post please!")
 )
 
 type Server struct {
@@ -32,11 +32,13 @@ func Start(config util.Config, client *rdClient.Client) error {
 		return fmt.Errorf("failed to start bot: %v", err)
 	}
 
-	bot.Handle("/start", server.start)
-	bot.Handle(&btnHelp, server.getRandomPost)
+	menu.Reply(menu.Row(btnMorePosts))
 
+	bot.Handle("/start", server.start)
+	bot.Handle(&btnMorePosts, server.getRandomPost)
+
+	log.Println("starting reddit tg server")
 	bot.Start()
 
-	log.Println("Successfully started reddit bot server")
 	return nil
 }

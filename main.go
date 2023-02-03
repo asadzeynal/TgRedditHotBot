@@ -10,7 +10,7 @@ import (
 func main() {
 	config, err := util.LoadConfig(".")
 	if err != nil {
-		log.Fatal("Failed to load config: %v", err)
+		log.Fatalf("failed to load config: %v", err)
 	}
 
 	client, err := rdClient.New(config)
