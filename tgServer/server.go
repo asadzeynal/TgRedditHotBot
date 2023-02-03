@@ -5,7 +5,15 @@ import (
 	"github.com/asadzeynal/TgRedditHotBot/rdClient"
 	"github.com/asadzeynal/TgRedditHotBot/util"
 	"gopkg.in/telebot.v3"
+	"log"
 	"time"
+)
+
+var (
+	// Universal markup builders.
+	menu = &telebot.ReplyMarkup{ResizeKeyboard: true}
+	// Reply buttons.
+	btnHelp = menu.Text("ℹ Help")
 )
 
 type Server struct {
@@ -25,8 +33,10 @@ func Start(config util.Config, client *rdClient.Client) error {
 	}
 
 	bot.Handle("/start", server.start)
+	bot.Handle(&btnHelp, server.getRandomPost)
 
 	bot.Start()
 
+	log.Println("Successfully started reddit bot server")
 	return nil
 }

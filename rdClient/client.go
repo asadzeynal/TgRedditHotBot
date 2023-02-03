@@ -196,6 +196,7 @@ func New(config util.Config) (*Client, error) {
 
 	client.scheduleTokenUpdate()
 
+	log.Println("Initialized Reddit client")
 	return &client, nil
 }
 
@@ -211,7 +212,6 @@ func (c *Client) scheduleTokenUpdate() {
 				// Try again in a minute
 				ticker.Reset(60 * time.Second)
 			}
-			log.Println("Successfully updated reddit token")
 			ticker.Reset(c.token.RefreshAt.Sub(time.Now()))
 		}
 	}()
@@ -280,6 +280,7 @@ func (c *Client) fetchAccessToken() error {
 		return fmt.Errorf("error when processing response: %v", err)
 	}
 
+	log.Println("Successfully updated reddit token")
 	c.token = &token
 	return nil
 }

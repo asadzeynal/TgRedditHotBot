@@ -15,11 +15,11 @@ func main() {
 
 	client, err := rdClient.New(config)
 	if err != nil {
-		log.Fatal("Failed to start reddit client")
+		log.Fatalf("failed to start reddit client: %v", err)
 	}
 
 	err = tgServer.Start(config, client)
 	if err != nil {
-		log.Fatal("Failed to start reddit client", err)
+		log.Fatalf("failed to start tg server: %v", err)
 	}
 }
