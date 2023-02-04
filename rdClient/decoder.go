@@ -1,4 +1,4 @@
-package util
+package rdClient
 
 import (
 	"encoding/json"
@@ -158,12 +158,6 @@ type RedditPostResponse struct {
 		} `json:"children"`
 		Before interface{} `json:"before"`
 	} `json:"data"`
-}
-
-type RedditPost struct {
-	ImageUrl string
-	Title    string
-	Url      string
 }
 
 func DecodeRedditPost(body *io.ReadCloser, res *RedditPost) error {

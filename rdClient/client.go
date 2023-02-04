@@ -6,7 +6,6 @@ import (
 	"github.com/asadzeynal/TgRedditHotBot/util"
 	"log"
 	"net/http"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -23,16 +22,20 @@ type RedditAccessToken struct {
 	RefreshAt   time.Time
 }
 
+type RedditPost struct {
+	ImageUrl string
+	Title    string
+	Url      string
+}
+
 type Client struct {
-	token           *RedditAccessToken
-	config          util.Config
-	routinePoolSize int
+	token  *RedditAccessToken
+	config util.Config
 }
 
 func New(config util.Config) (*Client, error) {
 	client := Client{
-		routinePoolSize: runtime.NumCPU(),
-		config:          config,
+		config: config,
 	}
 
 	err := client.fetchAccessToken()
@@ -63,12 +66,13 @@ func (c *Client) scheduleTokenUpdate() {
 	}()
 }
 
-func (c *Client) FetchRandomPost() (util.RedditPost, error) {
-	resBody := util.RedditPost{}
+// FetchRandomPost Fetches a hot post from a random subreddit
+func (c *Client) FetchRandomPost() (RedditPost, error) {
+	resBody := RedditPost{}
 	for {
 		req, err := http.NewRequest(http.MethodGet, RandomPostUrl, nil)
 		if err != nil {
-			return util.RedditPost{}, fmt.Errorf("error while creating request: %v", err)
+			return RedditPost{}, fmt.Errorf("error while creating request: %v", err)
 		}
 
 		q := req.URL.Query()
@@ -81,14 +85,14 @@ func (c *Client) FetchRandomPost() (util.RedditPost, error) {
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return util.RedditPost{}, fmt.Errorf("error while making request: %v", err)
+			return RedditPost{}, fmt.Errorf("error while making request: %v", err)
 		}
 		if res.StatusCode != http.StatusOK {
 			log.Println("error:", res.StatusCode)
 		}
 		defer res.Body.Close()
 
-		err = util.DecodeRedditPost(&res.Body, &resBody)
+		err = DecodeRedditPost(&res.Body, &resBody)
 		if err != nil {
 			fmt.Errorf("error from decoder: %v", err)
 			continue
