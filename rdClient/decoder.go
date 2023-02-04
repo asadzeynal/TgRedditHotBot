@@ -181,7 +181,7 @@ func DecodeRedditPost(body *io.ReadCloser, res *RedditPost) error {
 
 	res.Title = r.Data.Children[0].Data.Title
 	res.ImageUrl = r.Data.Children[0].Data.Preview.Images[0].Source.Url
-	res.Url = r.Data.Children[0].Data.Url
+	res.Url = fmt.Sprintf("https://reddit.com%s", r.Data.Children[0].Data.Permalink)
 
 	return nil
 }
