@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 )
 
 type RedditPostResponse struct {
@@ -152,8 +153,21 @@ type RedditPostResponse struct {
 				SubredditSubscribers     int           `json:"subreddit_subscribers"`
 				CreatedUtc               float64       `json:"created_utc"`
 				NumCrossposts            int           `json:"num_crossposts"`
-				Media                    interface{}   `json:"media"`
-				IsVideo                  bool          `json:"is_video"`
+				Media                    struct {
+					RedditVideo struct {
+						BitrateKbps       int    `json:"bitrate_kbps"`
+						FallbackUrl       string `json:"fallback_url"`
+						Height            int    `json:"height"`
+						Width             int    `json:"width"`
+						ScrubberMediaUrl  string `json:"scrubber_media_url"`
+						DashUrl           string `json:"dash_url"`
+						Duration          int    `json:"duration"`
+						HlsUrl            string `json:"hls_url"`
+						IsGif             bool   `json:"is_gif"`
+						TranscodingStatus string `json:"transcoding_status"`
+					} `json:"reddit_video"`
+				} `json:"media"`
+				IsVideo bool `json:"is_video"`
 			} `json:"data"`
 		} `json:"children"`
 		Before interface{} `json:"before"`
@@ -164,6 +178,7 @@ func DecodeRedditPost(body *io.ReadCloser, res *RedditPost) error {
 	r := RedditPostResponse{}
 	err := json.NewDecoder(*body).Decode(&r)
 	if err != nil {
+		fmt.Printf("could not decode reddit response: %v", err)
 		return fmt.Errorf("could not decode reddit response: %v", err)
 	}
 
@@ -171,17 +186,23 @@ func DecodeRedditPost(body *io.ReadCloser, res *RedditPost) error {
 		return fmt.Errorf("no results returned")
 	}
 
-	if len(r.Data.Children[0].Data.Preview.Images) == 0 {
-		return fmt.Errorf("post does not contain any photos")
-	}
-
-	if !r.Data.Children[0].Data.Preview.Enabled {
-		return fmt.Errorf("preview disabled")
+	if len(r.Data.Children[0].Data.Preview.Images) > 0 && r.Data.Children[0].Data.Preview.Enabled {
+		res.ImageUrl = strings.ReplaceAll(r.Data.Children[0].Data.Preview.Images[0].Source.Url, "&amp;", "&")
+	} else if r.Data.Children[0].Data.IsVideo {
+		res.Video = RedditVideo{
+			Height:   r.Data.Children[0].Data.Media.RedditVideo.Height,
+			Width:    r.Data.Children[0].Data.Media.RedditVideo.Width,
+			Duration: r.Data.Children[0].Data.Media.RedditVideo.Duration,
+			Url:      r.Data.Children[0].Data.Media.RedditVideo.FallbackUrl,
+		}
+	} else {
+		return fmt.Errorf("post does not contain any photos or videos")
 	}
 
 	res.Title = r.Data.Children[0].Data.Title
-	res.ImageUrl = r.Data.Children[0].Data.Preview.Images[0].Source.Url
 	res.Url = fmt.Sprintf("https://reddit.com%s", r.Data.Children[0].Data.Permalink)
+
+	fmt.Println(res)
 
 	return nil
 }

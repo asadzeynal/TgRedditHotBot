@@ -3,7 +3,6 @@ package tgServer
 import (
 	"fmt"
 	"gopkg.in/telebot.v3"
-	"strings"
 )
 
 func (s *Server) start(ctx telebot.Context) error {
@@ -15,7 +14,7 @@ func (s *Server) start(ctx telebot.Context) error {
 }
 
 func (s *Server) getRandomPost(ctx telebot.Context) error {
-	postResponse, err := s.rdClient.FetchRandomPost()
+	post, err := s.rdClient.FetchRandomPost()
 	if err != nil {
 		err = ctx.Send("Please try again later", menu)
 		if err != nil {
@@ -24,13 +23,29 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 		return fmt.Errorf("error while retrieving post: %v ", err)
 	}
 
-	parsedUrl := strings.ReplaceAll(postResponse.ImageUrl, "&amp;", "&")
-	caption := fmt.Sprintf("%s\n%s", postResponse.Title, postResponse.Url)
+	caption := fmt.Sprintf("%s\n\n%s", post.Title, post.Url)
 
-	photo := &telebot.Photo{File: telebot.FromURL(parsedUrl), Caption: caption}
-	err = ctx.SendAlbum(telebot.Album{photo}, menu)
-	if err != nil {
-		return fmt.Errorf("could not send response\n oldUrl: %v\n url: %v\n error: %v", postResponse.ImageUrl, parsedUrl, err)
+	if post.ImageUrl != "" {
+		photo := &telebot.Photo{File: telebot.FromURL(post.ImageUrl), Caption: caption}
+		err = ctx.SendAlbum(telebot.Album{photo}, menu)
+		if err != nil {
+			return fmt.Errorf("could not send response\n url: %v\n error: %v", post.ImageUrl, err)
+		}
+		return nil
 	}
+
+	video := &telebot.Video{
+		File:      telebot.FromURL(post.Video.Url),
+		Caption:   caption,
+		Streaming: true,
+		Width:     post.Video.Width,
+		Height:    post.Video.Height,
+	}
+
+	err = ctx.SendAlbum(telebot.Album{video}, menu)
+	if err != nil {
+		return fmt.Errorf("could not send response\n url: %v\n error: %v", post.Video, err)
+	}
+
 	return nil
 }
