@@ -11,7 +11,7 @@ import (
 )
 
 const AuthUrl = "https://www.reddit.com/api/v1/access_token"
-const RandomPostUrl = "https://oauth.reddit.com/r/random/hot"
+const RandomPostUrl = "https://oauth.reddit.com/r/random/top"
 const AuthParam = "grant_type=client_credentials"
 
 type RedditAccessToken struct {
@@ -22,25 +22,43 @@ type RedditAccessToken struct {
 	RefreshAt   time.Time
 }
 
+type RedditVideo struct {
+	Height   int
+	Width    int
+	Duration int
+	Url      string
+}
+
 type RedditPost struct {
 	ImageUrl string
 	Title    string
 	Url      string
+	Video    RedditVideo
 }
 
 type Client struct {
 	token  *RedditAccessToken
-	config util.Config
+	config *util.Config
 }
 
 func New(config util.Config) (*Client, error) {
 	client := Client{
-		config: config,
+		config: &config,
+		token:  &RedditAccessToken{},
 	}
 
-	err := client.fetchAccessToken()
+	expiresAt, err := time.Parse(time.RFC3339, config.TokenRefreshAt)
 	if err != nil {
-		return &Client{}, fmt.Errorf("error while fetching reddit access token: %v", err)
+		config.TokenRefreshAt = ""
+	}
+	client.token.AccessToken = config.RedditAccessToken
+	client.token.RefreshAt = expiresAt
+
+	if time.Now().After(expiresAt) {
+		err := client.fetchAccessToken()
+		if err != nil {
+			return &Client{}, fmt.Errorf("error while fetching reddit access token: %v", err)
+		}
 	}
 
 	client.scheduleTokenUpdate()
@@ -134,5 +152,15 @@ func (c *Client) fetchAccessToken() error {
 
 	log.Println("Successfully updated reddit token")
 	c.token = &token
+
+	err = c.config.Set("reddit-access-token", c.token.AccessToken)
+	if err != nil {
+		return err
+	}
+	err = c.config.Set("token-refresh-at", token.RefreshAt.Format(time.RFC3339))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
