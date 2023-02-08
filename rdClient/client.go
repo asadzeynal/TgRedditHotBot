@@ -3,6 +3,7 @@ package rdClient
 import (
 	"encoding/json"
 	"fmt"
+	db "github.com/asadzeynal/TgRedditHotBot/db/sqlc"
 	"github.com/asadzeynal/TgRedditHotBot/util"
 	"log"
 	"net/http"
@@ -11,7 +12,7 @@ import (
 )
 
 const AuthUrl = "https://www.reddit.com/api/v1/access_token"
-const RandomPostUrl = "https://oauth.reddit.com/r/random/top"
+const RandomPostUrl = "https://oauth.reddit.com/r/all/top"
 const AuthParam = "grant_type=client_credentials"
 
 type RedditAccessToken struct {
@@ -39,12 +40,14 @@ type RedditPost struct {
 type Client struct {
 	token  *RedditAccessToken
 	config *util.Config
+	store  db.Store
 }
 
-func New(config util.Config) (*Client, error) {
+func New(config util.Config, store db.Store) (*Client, error) {
 	client := Client{
 		config: &config,
 		token:  &RedditAccessToken{},
+		store:  store,
 	}
 
 	expiresAt, err := time.Parse(time.RFC3339, config.TokenRefreshAt)

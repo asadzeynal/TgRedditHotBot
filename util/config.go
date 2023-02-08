@@ -10,6 +10,8 @@ type Config struct {
 	TgToken           string `mapstructure:"tg-token"`
 	RedditAccessToken string `mapstructure:"reddit-access-token"`
 	TokenRefreshAt    string `mapstructure:"token-refresh-at"`
+	DBDriver          string `mapstructure:"db-driver"`
+	DBSource          string `mapstructure:"db-source"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
