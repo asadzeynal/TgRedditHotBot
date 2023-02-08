@@ -27,3 +27,5 @@ CREATE INDEX ON "post_videos" ("post");
 ALTER TABLE "post_images" ADD FOREIGN KEY ("post") REFERENCES "posts" ("id");
 
 ALTER TABLE "post_videos" ADD FOREIGN KEY ("post") REFERENCES "posts" ("id");
+
+CREATE EXTENSION tsm_system_rows;
