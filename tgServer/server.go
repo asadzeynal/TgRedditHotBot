@@ -2,11 +2,13 @@ package tgServer
 
 import (
 	"fmt"
+	"log"
+	"time"
+
+	db "github.com/asadzeynal/TgRedditHotBot/db/sqlc"
 	"github.com/asadzeynal/TgRedditHotBot/rdClient"
 	"github.com/asadzeynal/TgRedditHotBot/util"
 	"gopkg.in/telebot.v3"
-	"log"
-	"time"
 )
 
 var (
@@ -18,10 +20,11 @@ var (
 
 type Server struct {
 	rdClient *rdClient.Client
+	store    db.Store
 }
 
-func Start(config util.Config, client *rdClient.Client) error {
-	server := Server{client}
+func Start(config util.Config, client *rdClient.Client, store db.Store) error {
+	server := Server{client, store}
 
 	pref := telebot.Settings{
 		Token:  config.TgToken,

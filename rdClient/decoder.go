@@ -190,7 +190,7 @@ func DecodeRedditResponse(body *io.ReadCloser) ([]*RedditPost, error) {
 	for i := range r.Data.Children {
 		var post RedditPost
 		if len(r.Data.Children[i].Data.Preview.Images) > 0 && r.Data.Children[i].Data.Preview.Enabled {
-			post.ImageUrl = strings.ReplaceAll(r.Data.Children[i].Data.Preview.Images[i].Source.Url, "&amp;", "&")
+			post.ImageUrl = strings.ReplaceAll(r.Data.Children[i].Data.Preview.Images[0].Source.Url, "&amp;", "&")
 			post.ContentType = "image"
 		} else if r.Data.Children[i].Data.IsVideo {
 			post.Video = RedditVideo{

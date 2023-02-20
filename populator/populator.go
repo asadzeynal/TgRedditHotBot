@@ -8,7 +8,7 @@ import (
 	"github.com/asadzeynal/TgRedditHotBot/rdClient"
 )
 
-func Start(store *db.SQLStore, client rdClient.Client) error {
+func Run(store db.Store, client *rdClient.Client) error {
 	posts, err := client.FetchPosts()
 	if err != nil {
 		return fmt.Errorf("error while retrieving posts: %v ", err)
@@ -23,7 +23,7 @@ func Start(store *db.SQLStore, client rdClient.Client) error {
 			}
 
 			if post.ContentType == "image" {
-				_, err := store.CreatePostImage(context.Background(), db.CreatePostImageParams{
+				_, err := queries.CreatePostImage(context.Background(), db.CreatePostImageParams{
 					Post: post.Id,
 					Url:  post.ImageUrl,
 				})
@@ -32,7 +32,7 @@ func Start(store *db.SQLStore, client rdClient.Client) error {
 				}
 
 			} else if post.ContentType == "video" {
-				_, err := store.CreatePostVideo(context.Background(), db.CreatePostVideoParams{
+				_, err := queries.CreatePostVideo(context.Background(), db.CreatePostVideoParams{
 					Post:     post.Id,
 					Height:   int32(post.Video.Height),
 					Width:    int32(post.Video.Width),
