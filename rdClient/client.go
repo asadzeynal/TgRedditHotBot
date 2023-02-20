@@ -3,12 +3,13 @@ package rdClient
 import (
 	"encoding/json"
 	"fmt"
-	db "github.com/asadzeynal/TgRedditHotBot/db/sqlc"
-	"github.com/asadzeynal/TgRedditHotBot/util"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	db "github.com/asadzeynal/TgRedditHotBot/db/sqlc"
+	"github.com/asadzeynal/TgRedditHotBot/util"
 )
 
 const AuthUrl = "https://www.reddit.com/api/v1/access_token"
@@ -31,10 +32,12 @@ type RedditVideo struct {
 }
 
 type RedditPost struct {
-	ImageUrl string
-	Title    string
-	Url      string
-	Video    RedditVideo
+	Id          string
+	ImageUrl    string
+	Title       string
+	Url         string
+	Video       RedditVideo
+	ContentType string
 }
 
 type Client struct {
@@ -87,40 +90,37 @@ func (c *Client) scheduleTokenUpdate() {
 	}()
 }
 
-// FetchRandomPost Fetches a hot post from a random subreddit
-func (c *Client) FetchRandomPost() (RedditPost, error) {
-	resBody := RedditPost{}
-	for {
-		req, err := http.NewRequest(http.MethodGet, RandomPostUrl, nil)
-		if err != nil {
-			return RedditPost{}, fmt.Errorf("error while creating request: %v", err)
-		}
-
-		q := req.URL.Query()
-		q.Add("limit", "1")
-		req.URL.RawQuery = q.Encode()
-
-		authString := fmt.Sprintf("Bearer %s", c.token.AccessToken)
-		req.Header.Add("Authorization", authString)
-		req.Header.Add("User-Agent", "TgRedditHot/0.0.1")
-
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return RedditPost{}, fmt.Errorf("error while making request: %v", err)
-		}
-		if res.StatusCode != http.StatusOK {
-			log.Println("error:", res.StatusCode)
-		}
-		defer res.Body.Close()
-
-		err = DecodeRedditPost(&res.Body, &resBody)
-		if err != nil {
-			fmt.Errorf("error from decoder: %v", err)
-			continue
-		}
-
-		return resBody, nil
+// FetchRandomPost Fetches 100 top posts from a /r/all subreddit
+func (c *Client) FetchPosts() ([]*RedditPost, error) {
+	resBody := []*RedditPost{}
+	req, err := http.NewRequest(http.MethodGet, RandomPostUrl, nil)
+	if err != nil {
+		return []*RedditPost{}, fmt.Errorf("error while creating request: %v", err)
 	}
+
+	q := req.URL.Query()
+	q.Add("limit", "100")
+	req.URL.RawQuery = q.Encode()
+
+	authString := fmt.Sprintf("Bearer %s", c.token.AccessToken)
+	req.Header.Add("Authorization", authString)
+	req.Header.Add("User-Agent", "TgRedditHot/0.0.1")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return []*RedditPost{}, fmt.Errorf("error while making request: %v", err)
+	}
+	if res.StatusCode != http.StatusOK {
+		log.Println("error:", res.StatusCode)
+	}
+	defer res.Body.Close()
+
+	resBody, err = DecodeRedditResponse(&res.Body)
+	if err != nil {
+		return []*RedditPost{}, fmt.Errorf("error from decoder: %v", err)
+	}
+
+	return resBody, nil
 }
 
 // TODO: Implement timeout

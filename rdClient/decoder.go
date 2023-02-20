@@ -174,35 +174,41 @@ type RedditPostResponse struct {
 	} `json:"data"`
 }
 
-func DecodeRedditPost(body *io.ReadCloser, res *RedditPost) error {
+func DecodeRedditResponse(body *io.ReadCloser) ([]*RedditPost, error) {
 	r := RedditPostResponse{}
 	err := json.NewDecoder(*body).Decode(&r)
 	if err != nil {
 		fmt.Printf("could not decode reddit response: %v", err)
-		return fmt.Errorf("could not decode reddit response: %v", err)
+		return nil, fmt.Errorf("could not decode reddit response: %v", err)
 	}
 
 	if len(r.Data.Children) == 0 {
-		return fmt.Errorf("no results returned")
+		return nil, fmt.Errorf("no results returned")
 	}
 
-	if len(r.Data.Children[0].Data.Preview.Images) > 0 && r.Data.Children[0].Data.Preview.Enabled {
-		res.ImageUrl = strings.ReplaceAll(r.Data.Children[0].Data.Preview.Images[0].Source.Url, "&amp;", "&")
-	} else if r.Data.Children[0].Data.IsVideo {
-		res.Video = RedditVideo{
-			Height:   r.Data.Children[0].Data.Media.RedditVideo.Height,
-			Width:    r.Data.Children[0].Data.Media.RedditVideo.Width,
-			Duration: r.Data.Children[0].Data.Media.RedditVideo.Duration,
-			Url:      r.Data.Children[0].Data.Media.RedditVideo.FallbackUrl,
+	res := make([]*RedditPost, 0, len(r.Data.Children))
+	for i := range r.Data.Children {
+		var post RedditPost
+		if len(r.Data.Children[i].Data.Preview.Images) > 0 && r.Data.Children[i].Data.Preview.Enabled {
+			post.ImageUrl = strings.ReplaceAll(r.Data.Children[i].Data.Preview.Images[i].Source.Url, "&amp;", "&")
+			post.ContentType = "image"
+		} else if r.Data.Children[i].Data.IsVideo {
+			post.Video = RedditVideo{
+				Height:   r.Data.Children[i].Data.Media.RedditVideo.Height,
+				Width:    r.Data.Children[i].Data.Media.RedditVideo.Width,
+				Duration: r.Data.Children[i].Data.Media.RedditVideo.Duration,
+				Url:      r.Data.Children[i].Data.Media.RedditVideo.FallbackUrl,
+			}
+			post.ContentType = "video"
+		} else {
+			continue
 		}
-	} else {
-		return fmt.Errorf("post does not contain any photos or videos")
+
+		post.Id = r.Data.Children[i].Data.Name
+		post.Title = r.Data.Children[i].Data.Title
+		post.Url = fmt.Sprintf("https://reddit.com%s", r.Data.Children[i].Data.Permalink)
+		res = append(res, &post)
 	}
 
-	res.Title = r.Data.Children[0].Data.Title
-	res.Url = fmt.Sprintf("https://reddit.com%s", r.Data.Children[0].Data.Permalink)
-
-	fmt.Println(res)
-
-	return nil
+	return res, nil
 }
