@@ -3,6 +3,7 @@ module github.com/asadzeynal/TgRedditHotBot
 go 1.19
 
 require (
+	github.com/lib/pq v1.10.7
 	github.com/spf13/viper v1.15.0
 	gopkg.in/telebot.v3 v3.1.2
 )
