@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/asadzeynal/TgRedditHotBot/util"
 )
 
 type FullPost struct {
@@ -32,7 +34,14 @@ func NewStore(db *sql.DB) Store {
 }
 
 func (store *SQLStore) FetchFullRandomPost(ctx context.Context) (FullPost, error) {
-	p, err := store.GetRandomPost(ctx)
+	postsCount, err := store.GetTotalCount(ctx)
+	if err != nil {
+		return FullPost{}, fmt.Errorf("Unable to fetch posts count: %v", err)
+	}
+
+	postRowNum := util.RandomInRange(0, int(postsCount))
+
+	p, err := store.GetRandomPost(ctx, int32(postRowNum))
 	if err != nil {
 		return FullPost{}, fmt.Errorf("Unable to fetch random post: %v", err)
 	}

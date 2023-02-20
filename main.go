@@ -31,7 +31,7 @@ func main() {
 		log.Fatalf("failed to start reddit client: %v", err)
 	}
 
-	err = scheduleDbPopulation(store, client, time.Minute)
+	err = scheduleDbPopulation(store, client, time.Hour)
 	if err != nil {
 		log.Fatalf("failed to perform initial populator run: %v", err)
 	}

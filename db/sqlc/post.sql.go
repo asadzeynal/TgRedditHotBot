@@ -38,12 +38,11 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 }
 
 const getRandomPost = `-- name: GetRandomPost :one
-SELECT id, title, url, created_at FROM posts
-TABLESAMPLE system_rows(1)
+SELECT id, title, url, created_at FROM posts OFFSET $1 LIMIT 1
 `
 
-func (q *Queries) GetRandomPost(ctx context.Context) (Post, error) {
-	row := q.db.QueryRowContext(ctx, getRandomPost)
+func (q *Queries) GetRandomPost(ctx context.Context, offset int32) (Post, error) {
+	row := q.db.QueryRowContext(ctx, getRandomPost, offset)
 	var i Post
 	err := row.Scan(
 		&i.ID,

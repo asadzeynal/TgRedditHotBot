@@ -13,7 +13,8 @@ type Querier interface {
 	CreatePostImage(ctx context.Context, arg CreatePostImageParams) (PostImage, error)
 	CreatePostVideo(ctx context.Context, arg CreatePostVideoParams) (PostVideo, error)
 	GetImagesByPost(ctx context.Context, post string) ([]PostImage, error)
-	GetRandomPost(ctx context.Context) (Post, error)
+	GetRandomPost(ctx context.Context, offset int32) (Post, error)
+	GetTotalCount(ctx context.Context) (int64, error)
 	GetVideosByPost(ctx context.Context, post string) ([]PostVideo, error)
 }
 

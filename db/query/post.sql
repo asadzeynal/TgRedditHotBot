@@ -8,5 +8,4 @@ $1, $2, $3
 ) RETURNING *;
 
 -- name: GetRandomPost :one
-SELECT * FROM posts
-TABLESAMPLE system_rows(1);
+SELECT * FROM posts OFFSET $1 LIMIT 1;

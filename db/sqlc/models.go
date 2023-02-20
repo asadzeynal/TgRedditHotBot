@@ -29,3 +29,7 @@ type PostVideo struct {
 	Duration int32  `json:"duration"`
 	Url      string `json:"url"`
 }
+
+type PostsCount struct {
+	Count int64 `json:"count"`
+}
