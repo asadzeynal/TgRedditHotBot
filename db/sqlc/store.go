@@ -33,6 +33,14 @@ func NewStore(db *sql.DB) Store {
 	}
 }
 
+func (store *SQLStore) RefreshPostsCount(ctx context.Context) error {
+	_, err := store.db.ExecContext(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY posts_count;")
+	if err != nil {
+		return fmt.Errorf("Unable to refresh posts_count: %v", err)
+	}
+	return nil
+}
+
 func (store *SQLStore) FetchFullRandomPost(ctx context.Context) (FullPost, error) {
 	postsCount, err := store.GetTotalCount(ctx)
 	if err != nil {

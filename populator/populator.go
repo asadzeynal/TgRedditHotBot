@@ -48,6 +48,11 @@ func Run(store db.Store, client *rdClient.Client) error {
 		})
 	}
 
+	if sqlStore, ok := store.(*db.SQLStore); ok {
+		err := sqlStore.RefreshPostsCount(context.Background())
+		fmt.Println(err)
+	}
+
 	return nil
 
 }
