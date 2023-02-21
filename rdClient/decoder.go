@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -193,13 +195,11 @@ func DecodeRedditResponse(body *io.ReadCloser) ([]*RedditPost, error) {
 			post.ImageUrl = strings.ReplaceAll(r.Data.Children[i].Data.Preview.Images[0].Source.Url, "&amp;", "&")
 			post.ContentType = "image"
 		} else if r.Data.Children[i].Data.IsVideo {
-			post.Video = RedditVideo{
-				Height:   r.Data.Children[i].Data.Media.RedditVideo.Height,
-				Width:    r.Data.Children[i].Data.Media.RedditVideo.Width,
-				Duration: r.Data.Children[i].Data.Media.RedditVideo.Duration,
-				Url:      r.Data.Children[i].Data.Media.RedditVideo.FallbackUrl,
+			err := setVideo(&post, &r, i)
+			if err != nil {
+				fmt.Printf("Unable to save with video, skipping item %v, %v", r.Data.Children[i].Data.Name, err)
+				continue
 			}
-			post.ContentType = "video"
 		} else {
 			continue
 		}
@@ -211,4 +211,63 @@ func DecodeRedditResponse(body *io.ReadCloser) ([]*RedditPost, error) {
 	}
 
 	return res, nil
+}
+
+func setVideo(post *RedditPost, r *RedditPostResponse, index int) error {
+	videoResolutions := [5]string{"1080", "720", "480", "360", "240"}
+
+	url := r.Data.Children[index].Data.Media.RedditVideo.FallbackUrl
+	resIndex := strings.Index(url, "DASH_") + 5
+	extIndex := strings.Index(url, ".mp4")
+	if resIndex == 4 || extIndex == -1 {
+		return fmt.Errorf("Could not parse resolution")
+	}
+	originalRes := url[resIndex:extIndex]
+	for i := range videoResolutions {
+		oResInt, err := strconv.Atoi(originalRes)
+		if err != nil {
+			continue
+		}
+		currResInt, err := strconv.Atoi(videoResolutions[i])
+		if err != nil {
+			continue
+		}
+		if oResInt < currResInt {
+			continue
+		}
+
+		contentLength, err := fetchVideoSize(strings.Replace(url, "DASH_"+originalRes, "DASH_"+videoResolutions[i], 1))
+		if err != nil || contentLength < 1 {
+			continue
+		}
+
+		//20 mb is max allowed TG file size for content in URL
+		if contentLength < 20971520 {
+			width := r.Data.Children[index].Data.Media.RedditVideo.Width / (oResInt / currResInt)
+
+			post.Video = RedditVideo{
+				Height:   currResInt,
+				Width:    width,
+				Duration: r.Data.Children[index].Data.Media.RedditVideo.Duration,
+				Url:      strings.Replace(url, "DASH_"+originalRes, "DASH_"+videoResolutions[i], 1),
+			}
+
+			post.ContentType = "video"
+			return nil
+		}
+	}
+	return fmt.Errorf("No video candidates")
+}
+
+func fetchVideoSize(url string) (int64, error) {
+	req, err := http.NewRequest(http.MethodHead, url, nil)
+	if err != nil {
+		return 0, fmt.Errorf("error while creating request: %v %v", req, err)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("error while sending request: %v %v", req, err)
+	}
+
+	return res.ContentLength, nil
 }
