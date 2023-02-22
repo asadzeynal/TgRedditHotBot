@@ -12,26 +12,33 @@ import (
 const createPostImage = `-- name: CreatePostImage :one
 INSERT INTO post_images (
     post,
-    url
+    url,
+    is_gif
 ) VALUES (
-$1, $2
-) RETURNING id, post, url
+$1, $2, $3
+) RETURNING id, post, url, is_gif
 `
 
 type CreatePostImageParams struct {
-	Post string `json:"post"`
-	Url  string `json:"url"`
+	Post  string `json:"post"`
+	Url   string `json:"url"`
+	IsGif bool   `json:"is_gif"`
 }
 
 func (q *Queries) CreatePostImage(ctx context.Context, arg CreatePostImageParams) (PostImage, error) {
-	row := q.db.QueryRowContext(ctx, createPostImage, arg.Post, arg.Url)
+	row := q.db.QueryRowContext(ctx, createPostImage, arg.Post, arg.Url, arg.IsGif)
 	var i PostImage
-	err := row.Scan(&i.ID, &i.Post, &i.Url)
+	err := row.Scan(
+		&i.ID,
+		&i.Post,
+		&i.Url,
+		&i.IsGif,
+	)
 	return i, err
 }
 
 const getImagesByPost = `-- name: GetImagesByPost :many
-SELECT id, post, url FROM post_images
+SELECT id, post, url, is_gif FROM post_images
 WHERE post = $1 LIMIT 10
 `
 
@@ -44,7 +51,12 @@ func (q *Queries) GetImagesByPost(ctx context.Context, post string) ([]PostImage
 	items := []PostImage{}
 	for rows.Next() {
 		var i PostImage
-		if err := rows.Scan(&i.ID, &i.Post, &i.Url); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Post,
+			&i.Url,
+			&i.IsGif,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

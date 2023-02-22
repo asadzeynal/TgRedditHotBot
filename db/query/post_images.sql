@@ -1,9 +1,10 @@
 -- name: CreatePostImage :one
 INSERT INTO post_images (
     post,
-    url
+    url,
+    is_gif
 ) VALUES (
-$1, $2
+$1, $2, $3
 ) RETURNING *;
 
 -- name: GetImagesByPost :many

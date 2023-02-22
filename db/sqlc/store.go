@@ -68,7 +68,11 @@ func (store *SQLStore) FetchFullRandomPost(ctx context.Context) (FullPost, error
 	postImage := PostImage{}
 	postVideo := PostVideo{}
 	if len(img) != 0 {
-		contentType = "image"
+		if img[0].IsGif {
+			contentType = "gif"
+		} else {
+			contentType = "image"
+		}
 		postImage = img[0]
 	} else if len(vid) != 0 {
 		contentType = "video"

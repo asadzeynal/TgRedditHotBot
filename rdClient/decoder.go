@@ -112,6 +112,13 @@ type RedditPostResponse struct {
 							Height int    `json:"height"`
 						} `json:"resolutions"`
 						Variants struct {
+							Gif struct {
+								Source struct {
+									Url    string `json:"url"`
+									Width  int    `json:"width"`
+									Height int    `json:"height"`
+								} `json:"source"`
+							} `json:"mp4"`
 						} `json:"variants"`
 						Id string `json:"id"`
 					} `json:"images"`
@@ -192,8 +199,13 @@ func DecodeRedditResponse(body *io.ReadCloser) ([]*RedditPost, error) {
 	for i := range r.Data.Children {
 		var post RedditPost
 		if len(r.Data.Children[i].Data.Preview.Images) > 0 && r.Data.Children[i].Data.Preview.Enabled {
-			post.ImageUrl = strings.ReplaceAll(r.Data.Children[i].Data.Preview.Images[0].Source.Url, "&amp;", "&")
-			post.ContentType = "image"
+			if r.Data.Children[i].Data.Preview.Images[0].Variants.Gif.Source.Url != "" {
+				post.ImageUrl = strings.ReplaceAll(r.Data.Children[i].Data.Preview.Images[0].Variants.Gif.Source.Url, "&amp;", "&")
+				post.ContentType = "gif"
+			} else {
+				post.ImageUrl = strings.ReplaceAll(r.Data.Children[i].Data.Preview.Images[0].Source.Url, "&amp;", "&")
+				post.ContentType = "image"
+			}
 		} else if r.Data.Children[i].Data.IsVideo {
 			err := setVideo(&post, &r, i)
 			if err != nil {

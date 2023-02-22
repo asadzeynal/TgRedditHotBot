@@ -16,9 +16,10 @@ type Post struct {
 }
 
 type PostImage struct {
-	ID   int64  `json:"id"`
-	Post string `json:"post"`
-	Url  string `json:"url"`
+	ID    int64  `json:"id"`
+	Post  string `json:"post"`
+	Url   string `json:"url"`
+	IsGif bool   `json:"is_gif"`
 }
 
 type PostVideo struct {

@@ -19,7 +19,7 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 	post, err := s.store.FetchFullRandomPost(context.Background())
 	if err != nil {
 		errSend := ctx.Send("Please try again later", menu)
-		if err != nil {
+		if errSend != nil {
 			return fmt.Errorf("could not get postResponse and could not send response: %v", errSend)
 		}
 		return fmt.Errorf("error while retrieving post: %v ", err)
@@ -34,6 +34,12 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 			return fmt.Errorf("could not send response\n url: %v\n error: %v", post.Image.Url, err)
 		}
 		return nil
+	} else if post.ContentType == "gif" {
+		gif := &telebot.Animation{File: telebot.FromURL(post.Image.Url), Caption: caption}
+		err = ctx.SendAlbum(telebot.Album{gif}, menu)
+		if err != nil {
+			return fmt.Errorf("could not send response\n url: %v\n error: %v", post.Image.Url, err)
+		}
 	}
 
 	video := &telebot.Video{

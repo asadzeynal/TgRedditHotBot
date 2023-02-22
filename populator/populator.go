@@ -22,10 +22,11 @@ func Run(store db.Store, client *rdClient.Client) error {
 				return fmt.Errorf("unable to store post: %v", err)
 			}
 
-			if post.ContentType == "image" {
+			if post.ContentType == "image" || post.ContentType == "gif" {
 				_, err := queries.CreatePostImage(context.Background(), db.CreatePostImageParams{
-					Post: post.Id,
-					Url:  post.ImageUrl,
+					Post:  post.Id,
+					Url:   post.ImageUrl,
+					IsGif: post.ContentType == "gif",
 				})
 				if err != nil {
 					return fmt.Errorf("unable to store image: %v", err)
