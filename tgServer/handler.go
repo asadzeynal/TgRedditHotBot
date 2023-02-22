@@ -36,7 +36,7 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 		return nil
 	} else if post.ContentType == "gif" {
 		gif := &telebot.Animation{File: telebot.FromURL(post.Image.Url), Caption: caption}
-		err = ctx.SendAlbum(telebot.Album{gif}, menu)
+		err = ctx.Send(gif, menu)
 		if err != nil {
 			return fmt.Errorf("could not send response\n url: %v\n error: %v", post.Image.Url, err)
 		}
