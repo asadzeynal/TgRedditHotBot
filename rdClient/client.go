@@ -84,6 +84,7 @@ func (c *Client) scheduleTokenUpdate() {
 				log.Println(err)
 				// Try again in a minute
 				ticker.Reset(60 * time.Second)
+				continue
 			}
 			ticker.Reset(c.token.RefreshAt.Sub(time.Now()))
 		}
