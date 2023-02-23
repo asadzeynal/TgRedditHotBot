@@ -25,14 +25,14 @@ func NewLogger() *Logger {
 	return &logger
 }
 
-func (logger *Logger) Info(s string) {
-	logger.infoLogger.Println(s)
+func (logger *Logger) Info(s string, v ...any) {
+	logger.infoLogger.Printf(s+"\n", v...)
 }
 
-func (logger *Logger) Warn(s string) {
-	logger.infoLogger.Println(s)
+func (logger *Logger) Warn(s string, v ...any) {
+	logger.infoLogger.Printf(s+"\n", v...)
 }
 
-func (logger *Logger) Error(s string) {
-	logger.errorLogger.Println(s)
+func (logger *Logger) Error(s string, v ...any) {
+	logger.errorLogger.Printf(s+"\n", v...)
 }
