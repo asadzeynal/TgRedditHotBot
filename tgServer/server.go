@@ -30,7 +30,7 @@ func Start(config util.Config, client *rdClient.Client, store db.Store) error {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "health: ok\n")
 	})
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8090", nil)
 
 	pref := telebot.Settings{
 		Token:  config.TgToken,
