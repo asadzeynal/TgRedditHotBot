@@ -45,6 +45,7 @@ func main() {
 }
 
 func scheduleDbPopulation(store db.Store, client *rdClient.Client, interval time.Duration) error {
+	populator.Run(store, client)
 	ticker := time.NewTicker(interval)
 	go func(s db.Store, c *rdClient.Client) {
 		for {

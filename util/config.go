@@ -2,22 +2,25 @@ package util
 
 import (
 	"fmt"
+
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	RedditAuth        string `mapstructure:"reddit-auth"`
-	TgToken           string `mapstructure:"tg-token"`
-	RedditAccessToken string `mapstructure:"reddit-access-token"`
-	TokenRefreshAt    string `mapstructure:"token-refresh-at"`
-	DBDriver          string `mapstructure:"db-driver"`
-	DBSource          string `mapstructure:"db-source"`
+	RedditAuth        string `mapstructure:"REDDIT_AUTH"`
+	TgToken           string `mapstructure:"TG_TOKEN"`
+	RedditAccessToken string `mapstructure:"REDDIT_ACCESS_TOKEN"`
+	TokenRefreshAt    string `mapstructure:"TOKEN_REFRESH_AT"`
+	DBDriver          string `mapstructure:"DB_DRIVER"`
+	DBSource          string `mapstructure:"DB_SOURCE"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
 	viper.AddConfigPath(path)
 	viper.SetConfigName("app")
-	viper.SetConfigType("yaml")
+	viper.SetConfigType("env")
+
+	viper.AutomaticEnv()
 
 	err = viper.ReadInConfig()
 	if err != nil {
