@@ -43,6 +43,7 @@ func Start(config util.Config, client *rdClient.Client, store db.Store) error {
 
 	bot.Handle("/start", server.start)
 	bot.Handle(&btnMorePosts, server.getRandomPost)
+	bot.SetWebhook(&telebot.Webhook{Listen: "/"})
 
 	log.Println("starting reddit tg server")
 	bot.Start()
