@@ -26,7 +26,7 @@ func main() {
 		log.Fatal("cannot connect to db: ", err)
 	}
 
-	store := db.NewStore(conn)
+	store := db.NewStore(conn, logger)
 
 	client, err := rdClient.New(config, store)
 	if err != nil {
