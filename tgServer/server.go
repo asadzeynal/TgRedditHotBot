@@ -40,14 +40,17 @@ func Start(config util.Config, client *rdClient.Client, store db.Store) error {
 	bot.Handle("/start", server.start)
 	bot.Handle(&btnMorePosts, server.getRandomPost)
 
+	go func() error {
+		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "ok") })
+		err = http.ListenAndServe(":8090", nil)
+		if err != nil {
+			return fmt.Errorf("error while creating http server: %v", err)
+		}
+		return nil
+	}()
+
 	log.Println("starting reddit tg server")
 	bot.Start()
-
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "ok") })
-	err = http.ListenAndServe(":8090", nil)
-	if err != nil {
-		return fmt.Errorf("error while creating http server: %v", err)
-	}
 
 	return nil
 }
