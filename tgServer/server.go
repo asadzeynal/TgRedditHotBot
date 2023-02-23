@@ -3,7 +3,6 @@ package tgServer
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	db "github.com/asadzeynal/TgRedditHotBot/db/sqlc"
@@ -26,11 +25,6 @@ type Server struct {
 
 func Start(config util.Config, client *rdClient.Client, store db.Store) error {
 	server := Server{client, store}
-
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "health: ok\n")
-	})
-	http.ListenAndServe(":8090", nil)
 
 	pref := telebot.Settings{
 		Token:  config.TgToken,
