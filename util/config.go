@@ -15,6 +15,7 @@ type Config struct {
 	DBSource          string `mapstructure:"DB_SOURCE"`
 }
 
+// In order for this to work with environment variables, the project has to have a .env file with all vars listed (can be empty)
 func LoadConfig(path string) (config Config, err error) {
 	viper.AddConfigPath(path)
 	viper.SetConfigName("app")
