@@ -13,6 +13,7 @@ services:
       dockerfile: ./Dockerfile
     ports:
       - "8080:8080"
+      - "8090:8090"
     environment:
       - DB_SOURCE=postgresql://root:password@postgres:5432/tgreddit?sslmode=disable
     depends_on:
