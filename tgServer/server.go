@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	db "github.com/asadzeynal/TgRedditHotBot/db/sqlc"
 	"github.com/asadzeynal/TgRedditHotBot/rdClient"
@@ -31,8 +30,8 @@ func Start(config util.Config, client *rdClient.Client, store db.Store) error {
 	http.ListenAndServe(":8090", nil)
 
 	pref := telebot.Settings{
-		Token:  config.TgToken,
-		Poller: &telebot.LongPoller{Timeout: 10 * time.Second},
+		Token: config.TgToken,
+		// Poller: &telebot.LongPoller{Timeout: 10 * time.Second},
 	}
 	bot, err := telebot.NewBot(pref)
 	if err != nil {
@@ -43,7 +42,7 @@ func Start(config util.Config, client *rdClient.Client, store db.Store) error {
 
 	bot.Handle("/start", server.start)
 	bot.Handle(&btnMorePosts, server.getRandomPost)
-	bot.SetWebhook(&telebot.Webhook{Listen: "/"})
+	bot.SetWebhook(&telebot.Webhook{Listen: ":8080"})
 
 	log.Println("starting reddit tg server")
 	bot.Start()
