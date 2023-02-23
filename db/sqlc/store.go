@@ -24,10 +24,10 @@ type Store interface {
 type SQLStore struct {
 	*Queries
 	db     *sql.DB
-	logger *util.Logger
+	logger util.Logger
 }
 
-func NewStore(db *sql.DB, logger *util.Logger) Store {
+func NewStore(db *sql.DB, logger util.Logger) Store {
 	return &SQLStore{
 		db:      db,
 		Queries: New(db),

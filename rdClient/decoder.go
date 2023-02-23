@@ -96,7 +96,7 @@ func setVideo(post *RedditPost, child *RedditPostResponseChild) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("No video candidates")
+	return fmt.Errorf("No video candidates\n")
 }
 
 func fetchVideoSize(url string) (int64, error) {
