@@ -44,7 +44,10 @@ func Start(config util.Config, client *rdClient.Client, store db.Store) error {
 	bot.Start()
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "ok") })
-	http.ListenAndServe(":8090", nil)
+	err = http.ListenAndServe(":8090", nil)
+	if err != nil {
+		return fmt.Errorf("error while creating http server: %v", err)
+	}
 
 	return nil
 }

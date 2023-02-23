@@ -60,6 +60,13 @@ func New(config util.Config, store db.Store) (*Client, error) {
 	client.token.AccessToken = config.RedditAccessToken
 	client.token.RefreshAt = expiresAt
 
+	if time.Now().After(expiresAt) {
+		err := client.fetchAccessToken()
+		if err != nil {
+			return &Client{}, fmt.Errorf("error while fetching reddit access token: %v", err)
+		}
+	}
+
 	client.scheduleTokenUpdate()
 
 	log.Println("Initialized Reddit client")
@@ -69,13 +76,6 @@ func New(config util.Config, store db.Store) (*Client, error) {
 // Schedules a reddit token refresh each n seconds, where n = token.ExpiresIn
 func (c *Client) scheduleTokenUpdate() {
 	ticker := time.NewTicker(c.token.RefreshAt.Sub(time.Now()))
-	if time.Now().After(c.token.RefreshAt) {
-		err := c.fetchAccessToken()
-		if err != nil {
-			log.Printf("failed to fetch token: %v", err)
-			ticker.Reset(60 * time.Second)
-		}
-	}
 	go func() {
 		for {
 			<-ticker.C
