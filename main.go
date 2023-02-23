@@ -15,6 +15,8 @@ import (
 
 func main() {
 	config, err := util.LoadConfig(".")
+	logger := util.NewLogger()
+
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}

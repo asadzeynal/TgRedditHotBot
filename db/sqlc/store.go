@@ -23,13 +23,15 @@ type Store interface {
 
 type SQLStore struct {
 	*Queries
-	db *sql.DB
+	db     *sql.DB
+	logger *util.Logger
 }
 
-func NewStore(db *sql.DB) Store {
+func NewStore(db *sql.DB, logger *util.Logger) Store {
 	return &SQLStore{
 		db:      db,
 		Queries: New(db),
+		logger:  logger,
 	}
 }
 
@@ -38,6 +40,7 @@ func (store *SQLStore) RefreshPostsCount(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Unable to refresh posts_count: %v", err)
 	}
+	store.logger.Info("Refreshed posts_count materialized view")
 	return nil
 }
 
@@ -48,41 +51,44 @@ func (store *SQLStore) FetchFullRandomPost(ctx context.Context) (FullPost, error
 	}
 
 	postRowNum := util.RandomInRange(0, int(postsCount))
+	store.logger.Info("total count: %v, random num: %v", postsCount, postRowNum)
 
 	p, err := store.GetRandomPost(ctx, int32(postRowNum))
 	if err != nil {
 		return FullPost{}, fmt.Errorf("Unable to fetch random post: %v", err)
 	}
+	store.logger.Info("post at random num %v: %v", postRowNum, p)
 
-	img, err := store.GetImagesByPost(ctx, p.ID)
+	imgs, err := store.GetImagesByPost(ctx, p.ID)
 	if err != nil {
 		return FullPost{}, fmt.Errorf("Unable to fetch random post: %v", err)
 	}
+	store.logger.Info("postId: %v, postImages: %v", p.ID, imgs)
 
-	vid, err := store.GetVideosByPost(ctx, p.ID)
+	vids, err := store.GetVideosByPost(ctx, p.ID)
 	if err != nil {
 		return FullPost{}, fmt.Errorf("Unable to fetch random post: %v", err)
 	}
+	store.logger.Info("postId: %v, postVideos: %v", p.ID, vids)
 
 	var contentType string
 	postImage := PostImage{}
 	postVideo := PostVideo{}
-	if len(img) != 0 {
-		if img[0].IsGif {
+	if len(imgs) != 0 {
+		if imgs[0].IsGif {
 			contentType = "gif"
 		} else {
 			contentType = "image"
 		}
-		postImage = img[0]
-	} else if len(vid) != 0 {
+		postImage = imgs[0]
+	} else if len(vids) != 0 {
 		contentType = "video"
-		postVideo = vid[0]
+		postVideo = vids[0]
 	} else {
 		return FullPost{}, fmt.Errorf("Post without video or image: %v", p.ID)
 	}
 
 	return FullPost{Post: p, Image: postImage, Video: postVideo, ContentType: contentType}, nil
-
 }
 
 func (store *SQLStore) ExecTx(ctx context.Context, fn func(queries *Queries) error) error {
