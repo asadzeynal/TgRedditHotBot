@@ -26,7 +26,7 @@ type CreatePostImageParams struct {
 }
 
 func (q *Queries) CreatePostImage(ctx context.Context, arg CreatePostImageParams) (PostImage, error) {
-	row := q.db.QueryRowContext(ctx, createPostImage, arg.Post, arg.Url, arg.IsGif)
+	row := q.db.QueryRow(ctx, createPostImage, arg.Post, arg.Url, arg.IsGif)
 	var i PostImage
 	err := row.Scan(
 		&i.ID,
@@ -43,7 +43,7 @@ WHERE post = $1 LIMIT 10
 `
 
 func (q *Queries) GetImagesByPost(ctx context.Context, post string) ([]PostImage, error) {
-	rows, err := q.db.QueryContext(ctx, getImagesByPost, post)
+	rows, err := q.db.Query(ctx, getImagesByPost, post)
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +60,6 @@ func (q *Queries) GetImagesByPost(ctx context.Context, post string) ([]PostImage
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

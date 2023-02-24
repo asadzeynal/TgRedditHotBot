@@ -14,7 +14,7 @@ SELECT count FROM posts_count
 `
 
 func (q *Queries) GetTotalCount(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getTotalCount)
+	row := q.db.QueryRow(ctx, getTotalCount)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
