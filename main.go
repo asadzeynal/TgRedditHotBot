@@ -13,6 +13,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const (
+	dbPopulationInterval = time.Hour
+)
+
 func main() {
 	config, err := util.LoadConfig(".")
 	logger := util.NewCustomLog()
@@ -33,7 +37,7 @@ func main() {
 		log.Fatalf("failed to start reddit client: %v", err)
 	}
 
-	err = scheduleDbPopulation(store, client, time.Hour)
+	err = scheduleDbPopulation(store, client, dbPopulationInterval)
 	if err != nil {
 		log.Fatalf("failed to perform initial populator run: %v", err)
 	}

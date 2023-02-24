@@ -1,5 +1,7 @@
+!app.env
+
 .idea
 vendor
-*.env -app.env
+*.env
 app.yaml
 *.old

@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -15,10 +16,21 @@ type Config struct {
 	DBSource          string `mapstructure:"DB_SOURCE"`
 }
 
+const envVariableName = "TGREDDITHOTBOT_ENV"
+
 // In order for this to work with environment variables, the project has to have a .env file with all vars listed (can be empty)
 func LoadConfig(path string) (config Config, err error) {
-	viper.AddConfigPath(path)
-	viper.SetConfigName("app")
+	// local or prod for now
+	environment := os.Getenv(envVariableName)
+
+	if environment == "" {
+		environment = "local"
+		viper.AddConfigPath(path)
+		viper.SetConfigName("app.dev")
+	}
+
+	fmt.Printf("Loading config on environment: %v\n", environment)
+
 	viper.SetConfigType("env")
 
 	viper.AutomaticEnv()
