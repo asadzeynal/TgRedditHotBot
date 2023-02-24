@@ -31,7 +31,7 @@ func LoadConfig(path string) (Config, error) {
 	switch environment {
 	case "prod":
 		e := env.Provider("", "", nil)
-		if err := k.Load(e, dotenv.Parser()); err != nil {
+		if err := k.Load(e, nil); err != nil {
 			return Config{}, fmt.Errorf("error loading config: %v", err)
 		}
 	default:
