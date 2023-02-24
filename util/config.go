@@ -21,10 +21,11 @@ type Config struct {
 
 const envVariableName = "TGRHB_ENV"
 
-var k = koanf.New(".")
+var k *koanf.Koanf
 
 // In order for this to work with environment variables, the project has to have a .env file with all vars listed (can be empty)
 func LoadConfig(path string) (Config, error) {
+	k = koanf.New(path)
 	// local or prod for now
 	environment := os.Getenv(envVariableName)
 
