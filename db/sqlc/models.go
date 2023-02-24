@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	ConfigType string `json:"config_type"`
-	Data       []byte `json:"data"`
+	ConfigType string     `json:"config_type"`
+	Data       ConfigData `json:"data"`
 }
 
 type Post struct {
