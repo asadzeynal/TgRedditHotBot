@@ -11,15 +11,15 @@ import (
 )
 
 type Config struct {
-	RedditAuth        string `koanf:"REDDIT_AUTH"`
-	TgToken           string `koanf:"TG_TOKEN"`
-	RedditAccessToken string `koanf:"REDDIT_ACCESS_TOKEN"`
-	TokenRefreshAt    string `koanf:"TOKEN_REFRESH_AT"`
-	DBDriver          string `koanf:"DB_DRIVER"`
-	DBSource          string `koanf:"DB_SOURCE"`
+	RedditAuth        string `koanf:"TGRHB_REDDIT_AUTH"`
+	TgToken           string `koanf:"TGRHB_TG_TOKEN"`
+	RedditAccessToken string `koanf:"TGRHB_REDDIT_ACCESS_TOKEN"`
+	TokenRefreshAt    string `koanf:"TGRHB_TOKEN_REFRESH_AT"`
+	DBDriver          string `koanf:"TGRHB_DB_DRIVER"`
+	DBSource          string `koanf:"TGRHB_DB_SOURCE"`
 }
 
-const envVariableName = "TGREDDITHOTBOT_ENV"
+const envVariableName = "TGRHB_ENV"
 
 var k = koanf.New(".")
 
@@ -30,7 +30,7 @@ func LoadConfig(path string) (Config, error) {
 
 	switch environment {
 	case "prod":
-		e := env.Provider("", "", nil)
+		e := env.Provider("TGRHB_", ".", nil)
 		if err := k.Load(e, nil); err != nil {
 			return Config{}, fmt.Errorf("error loading config: %v", err)
 		}
