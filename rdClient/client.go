@@ -157,14 +157,8 @@ func (c *Client) fetchAccessToken() error {
 	log.Println("Successfully updated reddit token")
 	c.token = &token
 
-	err = c.config.Set("reddit-access-token", c.token.AccessToken)
-	if err != nil {
-		return err
-	}
-	err = c.config.Set("token-refresh-at", token.RefreshAt.Format(time.RFC3339))
-	if err != nil {
-		return err
-	}
+	c.config.Set("reddit-access-token", c.token.AccessToken)
+	c.config.Set("token-refresh-at", token.RefreshAt.Format(time.RFC3339))
 
 	return nil
 }

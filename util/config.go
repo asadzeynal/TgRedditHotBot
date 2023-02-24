@@ -4,52 +4,52 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/viper"
+	"github.com/knadh/koanf/parsers/dotenv"
+	"github.com/knadh/koanf/providers/env"
+	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/v2"
 )
 
 type Config struct {
-	RedditAuth        string `mapstructure:"REDDIT_AUTH"`
-	TgToken           string `mapstructure:"TG_TOKEN"`
-	RedditAccessToken string `mapstructure:"REDDIT_ACCESS_TOKEN"`
-	TokenRefreshAt    string `mapstructure:"TOKEN_REFRESH_AT"`
-	DBDriver          string `mapstructure:"DB_DRIVER"`
-	DBSource          string `mapstructure:"DB_SOURCE"`
+	RedditAuth        string `koanf:"REDDIT_AUTH"`
+	TgToken           string `koanf:"TG_TOKEN"`
+	RedditAccessToken string `koanf:"REDDIT_ACCESS_TOKEN"`
+	TokenRefreshAt    string `koanf:"TOKEN_REFRESH_AT"`
+	DBDriver          string `koanf:"DB_DRIVER"`
+	DBSource          string `koanf:"DB_SOURCE"`
 }
 
 const envVariableName = "TGREDDITHOTBOT_ENV"
 
+var k = koanf.New(".")
+
 // In order for this to work with environment variables, the project has to have a .env file with all vars listed (can be empty)
-func LoadConfig(path string) (config Config, err error) {
+func LoadConfig(path string) (Config, error) {
 	// local or prod for now
 	environment := os.Getenv(envVariableName)
 
-	if environment == "" {
+	switch environment {
+	case "prod":
+		e := env.Provider("", "", nil)
+		if err := k.Load(e, dotenv.Parser()); err != nil {
+			return Config{}, fmt.Errorf("error loading config: %v", err)
+		}
+	default:
 		environment = "local"
-		viper.AddConfigPath(path)
-		viper.SetConfigName("app.dev")
+		f := file.Provider("app.dev.env")
+		if err := k.Load(f, dotenv.Parser()); err != nil {
+			return Config{}, fmt.Errorf("error loading config: %v", err)
+		}
 	}
 
 	fmt.Printf("Loading config on environment: %v\n", environment)
 
-	viper.SetConfigType("env")
+	config := Config{}
+	k.Unmarshal("", &config)
 
-	viper.AutomaticEnv()
-
-	err = viper.ReadInConfig()
-	if err != nil {
-		return
-	}
-
-	err = viper.Unmarshal(&config)
-	return
+	return config, nil
 }
 
-func (c *Config) Set(key string, value string) error {
-	viper.Set(key, value)
-	err := viper.WriteConfig()
-	if err != nil {
-		return fmt.Errorf("unable to write config: %v", err)
-	}
-	err = viper.Unmarshal(&c)
-	return err
+func (c *Config) Set(key string, value string) {
+	k.Set(key, value)
 }
