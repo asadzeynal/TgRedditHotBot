@@ -49,11 +49,17 @@ func Run(store db.Store, client *rdClient.Client) error {
 		})
 	}
 
+	return nil
+}
+
+func RefreshPostsCount(store db.Store) error {
 	if sqlStore, ok := store.(*db.SQLStore); ok {
 		err := sqlStore.RefreshPostsCount(context.Background())
-		fmt.Println(err)
+		if err != nil {
+			return fmt.Errorf("Unable to refresh Materialized View posts_count: %v", err)
+		}
+		return nil
 	}
 
-	return nil
-
+	return fmt.Errorf("store is not of type *db.SQLStore")
 }

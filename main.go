@@ -17,9 +17,10 @@ const (
 	dbPopulationInterval = time.Hour
 )
 
+var logger util.Logger = util.NewCustomLog()
+
 func main() {
 	config, err := util.LoadConfig(".")
-	logger := util.NewCustomLog()
 
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
@@ -49,17 +50,21 @@ func main() {
 }
 
 func scheduleDbPopulation(store db.Store, client *rdClient.Client, interval time.Duration) error {
-	populator.Run(store, client)
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(10 * time.Second)
 	go func(s db.Store, c *rdClient.Client) {
 		for {
 			<-ticker.C
 			err := populator.Run(s, c)
 			if err != nil {
-				log.Println(err)
+				logger.Error("Unable to populate db: %v ", err)
 				// Try again in a minute
 				ticker.Reset(60 * time.Second)
 			}
+			err = populator.RefreshPostsCount(s)
+			if err != nil {
+				logger.Warn("Unable to refresh posts count: %v ", err)
+			}
+
 			ticker.Reset(interval)
 		}
 	}(store, client)
