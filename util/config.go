@@ -17,11 +17,13 @@ type Config struct {
 	TokenRefreshAt    string `koanf:"TGRHB_TOKEN_REFRESH_AT"`
 	DBDriver          string `koanf:"TGRHB_DB_DRIVER"`
 	DBSource          string `koanf:"TGRHB_DB_SOURCE"`
+	EncryptionKey     string `koanf:"TGRHB_ENCRYPTION_KEY"`
 }
 
 const envVariableName = "TGRHB_ENV"
 
 var k *koanf.Koanf
+var config = Config{}
 
 // In order for this to work with environment variables, the project has to have a .env file with all vars listed (can be empty)
 func LoadConfig(path string) (Config, error) {
@@ -45,7 +47,6 @@ func LoadConfig(path string) (Config, error) {
 
 	fmt.Printf("Loading config on environment: %v\n", environment)
 
-	config := Config{}
 	k.Unmarshal("", &config)
 
 	return config, nil

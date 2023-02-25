@@ -1,6 +1,6 @@
 package db
 
 type ConfigData struct {
-	RedditAccessToken      string `json:"RedditAccessToken"`
+	RedditAccessToken      []byte `json:"RedditAccessToken"`
 	RedditTokenToRefreshAt string `json:"RedditTokenToRefreshAt"`
 }

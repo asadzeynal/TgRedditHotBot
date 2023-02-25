@@ -1,6 +1,7 @@
 package rdClient
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -52,6 +53,8 @@ func New(config util.Config, store db.Store) (*Client, error) {
 		token:  &RedditAccessToken{},
 		store:  store,
 	}
+
+	client.LoadRedditConfig()
 
 	expiresAt, err := time.Parse(time.RFC3339, config.TokenRefreshAt)
 	if err != nil {
@@ -157,8 +160,31 @@ func (c *Client) fetchAccessToken() error {
 	log.Println("Successfully updated reddit token")
 	c.token = &token
 
-	c.config.Set("reddit-access-token", c.token.AccessToken)
-	c.config.Set("token-refresh-at", token.RefreshAt.Format(time.RFC3339))
+	c.SaveRedditConfig(db.ConfigData{RedditAccessToken: token.AccessToken, RedditTokenToRefreshAt: token.RefreshAt.Format(time.RFC3339)})
 
+	return nil
+}
+
+func (c *Client) LoadRedditConfig() error {
+	redditConf, err := c.store.GetConfig(context.Background(), "reddit")
+	if err != nil {
+		return fmt.Errorf("Could not load config from DB: %v", err)
+	}
+	token := util.Decrypt([]byte(redditConf.Data.RedditAccessToken), c.config.EncryptionKey)
+
+	c.config.Set("REDDIT_ACCESS_TOKEN", token)
+	c.config.Set("TOKEN_REFRESH_AT", redditConf.Data.RedditTokenToRefreshAt)
+	return nil
+}
+
+func (c *Client) SaveRedditConfig(redditConf db.ConfigData) error {
+	encryptedAK := util.Encrypt([]byte(redditConf.RedditAccessToken), c.config.EncryptionKey)
+	c.store.UpdateConfig(context.Background(), db.UpdateConfigParams{
+		ConfigType: "reddit",
+		Data: db.ConfigData{
+			RedditAccessToken:      encryptedAK,
+			RedditTokenToRefreshAt: redditConf.RedditTokenToRefreshAt,
+		},
+	})
 	return nil
 }
