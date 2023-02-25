@@ -2,10 +2,10 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/asadzeynal/TgRedditHotBot/util"
+	"github.com/jackc/pgx/v5"
 )
 
 type FullPost struct {
@@ -23,11 +23,11 @@ type Store interface {
 
 type SQLStore struct {
 	*Queries
-	db     *sql.DB
+	db     *pgx.Conn
 	logger util.Logger
 }
 
-func NewStore(db *sql.DB, logger util.Logger) Store {
+func NewStore(db *pgx.Conn, logger util.Logger) Store {
 	return &SQLStore{
 		db:      db,
 		Queries: New(db),
@@ -36,7 +36,7 @@ func NewStore(db *sql.DB, logger util.Logger) Store {
 }
 
 func (store *SQLStore) RefreshPostsCount(ctx context.Context) error {
-	_, err := store.db.ExecContext(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY posts_count;")
+	_, err := store.db.Exec(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY posts_count;")
 	if err != nil {
 		return fmt.Errorf("Unable to refresh posts_count: %v", err)
 	}
@@ -63,13 +63,12 @@ func (store *SQLStore) FetchFullRandomPost(ctx context.Context) (FullPost, error
 	if err != nil {
 		return FullPost{}, fmt.Errorf("Unable to fetch random post: %v", err)
 	}
-	store.logger.Info("postId: %v, postImages: %v", p.ID, imgs)
 
 	vids, err := store.GetVideosByPost(ctx, p.ID)
 	if err != nil {
 		return FullPost{}, fmt.Errorf("Unable to fetch random post: %v", err)
 	}
-	store.logger.Info("postId: %v, postVideos: %v", p.ID, vids)
+	store.logger.Info("postId: %v, postImages: %v, postVideos: %v", p.ID, imgs, vids)
 
 	var contentType string
 	postImage := PostImage{}
@@ -92,7 +91,7 @@ func (store *SQLStore) FetchFullRandomPost(ctx context.Context) (FullPost, error
 }
 
 func (store *SQLStore) ExecTx(ctx context.Context, fn func(queries *Queries) error) error {
-	tx, err := store.db.BeginTx(ctx, nil)
+	tx, err := store.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
 	}
@@ -101,11 +100,11 @@ func (store *SQLStore) ExecTx(ctx context.Context, fn func(queries *Queries) err
 	err = fn(q)
 
 	if err != nil {
-		if rbErr := tx.Rollback(); rbErr != nil {
+		if rbErr := tx.Rollback(ctx); rbErr != nil {
 			return fmt.Errorf("tx err: %v, rb err: %v", err, rbErr)
 		}
 		return err
 	}
 
-	return tx.Commit()
+	return tx.Commit(ctx)
 }

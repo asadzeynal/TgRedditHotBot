@@ -1,7 +1,7 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"log"
 	"time"
 
@@ -10,7 +10,7 @@ import (
 	"github.com/asadzeynal/TgRedditHotBot/rdClient"
 	"github.com/asadzeynal/TgRedditHotBot/tgServer"
 	"github.com/asadzeynal/TgRedditHotBot/util"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -26,10 +26,11 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	conn, err := sql.Open(config.DBDriver, config.DBSource)
+	conn, err := pgx.Connect(context.Background(), config.DBSource)
 	if err != nil {
-		log.Fatal("cannot connect to db: ", err)
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
+	defer conn.Close(context.Background())
 
 	store := db.NewStore(conn, logger)
 

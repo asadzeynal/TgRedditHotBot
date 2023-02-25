@@ -5,14 +5,19 @@
 package db
 
 import (
-	"time"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Config struct {
+	ConfigType string     `json:"config_type"`
+	Data       ConfigData `json:"data"`
+}
+
 type Post struct {
-	ID        string    `json:"id"`
-	Title     string    `json:"title"`
-	Url       string    `json:"url"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        string             `json:"id"`
+	Title     string             `json:"title"`
+	Url       string             `json:"url"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type PostImage struct {

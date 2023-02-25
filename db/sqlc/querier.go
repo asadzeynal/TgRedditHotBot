@@ -12,10 +12,12 @@ type Querier interface {
 	CreatePost(ctx context.Context, arg CreatePostParams) (Post, error)
 	CreatePostImage(ctx context.Context, arg CreatePostImageParams) (PostImage, error)
 	CreatePostVideo(ctx context.Context, arg CreatePostVideoParams) (PostVideo, error)
+	GetConfig(ctx context.Context, configType string) (Config, error)
 	GetImagesByPost(ctx context.Context, post string) ([]PostImage, error)
 	GetRandomPost(ctx context.Context, offset int32) (Post, error)
 	GetTotalCount(ctx context.Context) (int64, error)
 	GetVideosByPost(ctx context.Context, post string) ([]PostVideo, error)
+	UpdateConfig(ctx context.Context, arg UpdateConfigParams) error
 }
 
 var _ Querier = (*Queries)(nil)

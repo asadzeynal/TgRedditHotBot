@@ -1,6 +1,7 @@
 package rdClient
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -46,12 +47,14 @@ type Client struct {
 	store  db.Store
 }
 
-func New(config util.Config, store db.Store) (*Client, error) {
+func New(config *util.Config, store db.Store) (*Client, error) {
 	client := Client{
-		config: &config,
+		config: config,
 		token:  &RedditAccessToken{},
 		store:  store,
 	}
+
+	client.LoadRedditConfig()
 
 	expiresAt, err := time.Parse(time.RFC3339, config.TokenRefreshAt)
 	if err != nil {
@@ -75,7 +78,12 @@ func New(config util.Config, store db.Store) (*Client, error) {
 
 // Schedules a reddit token refresh each n seconds, where n = token.ExpiresIn
 func (c *Client) scheduleTokenUpdate() {
-	ticker := time.NewTicker(c.token.RefreshAt.Sub(time.Now()))
+	until := time.Until(c.token.RefreshAt) - 60*time.Second
+	if until < 0 {
+		until = 0
+	}
+
+	ticker := time.NewTicker(until)
 	go func() {
 		for {
 			<-ticker.C
@@ -86,14 +94,14 @@ func (c *Client) scheduleTokenUpdate() {
 				ticker.Reset(60 * time.Second)
 				continue
 			}
-			ticker.Reset(c.token.RefreshAt.Sub(time.Now()))
+			ticker.Reset(time.Until(c.token.RefreshAt) - 60*time.Second)
 		}
 	}()
 }
 
 // FetchRandomPost Fetches 100 top posts from a /r/all subreddit
 func (c *Client) FetchPosts() ([]*RedditPost, error) {
-	resBody := []*RedditPost{}
+	var resBody []*RedditPost
 	req, err := http.NewRequest(http.MethodGet, RandomPostUrl, nil)
 	if err != nil {
 		return []*RedditPost{}, fmt.Errorf("error while creating request: %v", err)
@@ -157,8 +165,31 @@ func (c *Client) fetchAccessToken() error {
 	log.Println("Successfully updated reddit token")
 	c.token = &token
 
-	c.config.Set("reddit-access-token", c.token.AccessToken)
-	c.config.Set("token-refresh-at", token.RefreshAt.Format(time.RFC3339))
+	c.SaveRedditConfig(db.ConfigData{RedditAccessToken: []byte(token.AccessToken), RedditTokenToRefreshAt: token.RefreshAt.Format(time.RFC3339)})
 
+	return nil
+}
+
+func (c *Client) LoadRedditConfig() error {
+	redditConf, err := c.store.GetConfig(context.Background(), "reddit")
+	if err != nil {
+		return fmt.Errorf("could not load config from DB: %v", err)
+	}
+	token := util.Decrypt(redditConf.Data.RedditAccessToken, c.config.EncryptionKey)
+
+	c.config.Set("TGRHB_REDDIT_ACCESS_TOKEN", token)
+	c.config.Set("TGRHB_TOKEN_REFRESH_AT", redditConf.Data.RedditTokenToRefreshAt)
+	return nil
+}
+
+func (c *Client) SaveRedditConfig(redditConf db.ConfigData) error {
+	encryptedAK := util.Encrypt(redditConf.RedditAccessToken, c.config.EncryptionKey)
+	c.store.UpdateConfig(context.Background(), db.UpdateConfigParams{
+		ConfigType: "reddit",
+		Data: db.ConfigData{
+			RedditAccessToken:      encryptedAK,
+			RedditTokenToRefreshAt: redditConf.RedditTokenToRefreshAt,
+		},
+	})
 	return nil
 }

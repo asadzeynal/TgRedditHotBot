@@ -26,7 +26,7 @@ type CreatePostParams struct {
 }
 
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
-	row := q.db.QueryRowContext(ctx, createPost, arg.ID, arg.Title, arg.Url)
+	row := q.db.QueryRow(ctx, createPost, arg.ID, arg.Title, arg.Url)
 	var i Post
 	err := row.Scan(
 		&i.ID,
@@ -42,7 +42,7 @@ SELECT id, title, url, created_at FROM posts OFFSET $1 LIMIT 1
 `
 
 func (q *Queries) GetRandomPost(ctx context.Context, offset int32) (Post, error) {
-	row := q.db.QueryRowContext(ctx, getRandomPost, offset)
+	row := q.db.QueryRow(ctx, getRandomPost, offset)
 	var i Post
 	err := row.Scan(
 		&i.ID,

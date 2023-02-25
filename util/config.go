@@ -17,14 +17,17 @@ type Config struct {
 	TokenRefreshAt    string `koanf:"TGRHB_TOKEN_REFRESH_AT"`
 	DBDriver          string `koanf:"TGRHB_DB_DRIVER"`
 	DBSource          string `koanf:"TGRHB_DB_SOURCE"`
+	EncryptionKey     string `koanf:"TGRHB_ENCRYPTION_KEY"`
 }
 
 const envVariableName = "TGRHB_ENV"
 
-var k = koanf.New(".")
+var k *koanf.Koanf
+var config = Config{}
 
 // In order for this to work with environment variables, the project has to have a .env file with all vars listed (can be empty)
-func LoadConfig(path string) (Config, error) {
+func LoadConfig(path string) (*Config, error) {
+	k = koanf.New(path)
 	// local or prod for now
 	environment := os.Getenv(envVariableName)
 
@@ -32,24 +35,24 @@ func LoadConfig(path string) (Config, error) {
 	case "prod":
 		e := env.Provider("TGRHB_", ".", nil)
 		if err := k.Load(e, nil); err != nil {
-			return Config{}, fmt.Errorf("error loading config: %v", err)
+			return &Config{}, fmt.Errorf("error loading config: %v", err)
 		}
 	default:
 		environment = "local"
 		f := file.Provider("app.dev.env")
 		if err := k.Load(f, dotenv.Parser()); err != nil {
-			return Config{}, fmt.Errorf("error loading config: %v", err)
+			return &Config{}, fmt.Errorf("error loading config: %v", err)
 		}
 	}
 
 	fmt.Printf("Loading config on environment: %v\n", environment)
 
-	config := Config{}
 	k.Unmarshal("", &config)
 
-	return config, nil
+	return &config, nil
 }
 
 func (c *Config) Set(key string, value string) {
 	k.Set(key, value)
+	k.Unmarshal("", &config)
 }
