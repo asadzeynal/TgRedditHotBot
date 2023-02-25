@@ -34,8 +34,6 @@ func main() {
 
 	store := db.NewStore(conn, logger)
 
-	
-
 	client, err := rdClient.New(config, store)
 	if err != nil {
 		log.Fatalf("failed to start reddit client: %v", err)

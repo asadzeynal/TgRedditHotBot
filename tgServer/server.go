@@ -24,7 +24,7 @@ type Server struct {
 	store    db.Store
 }
 
-func Start(config util.Config, client *rdClient.Client, store db.Store) error {
+func Start(config *util.Config, client *rdClient.Client, store db.Store) error {
 	server := Server{client, store}
 
 	pref := telebot.Settings{

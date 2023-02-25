@@ -9,7 +9,7 @@ import (
 	"log"
 )
 
-func Encrypt(value string, keyPhrase string) []byte {
+func Encrypt(value []byte, keyPhrase string) []byte {
 	aesBlock, err := aes.NewCipher([]byte(keyPhrase))
 	if err != nil {
 		fmt.Println(err)
@@ -23,7 +23,7 @@ func Encrypt(value string, keyPhrase string) []byte {
 	nonce := make([]byte, gcmInstance.NonceSize())
 	_, _ = io.ReadFull(rand.Reader, nonce)
 
-	cipheredText := gcmInstance.Seal(nonce, nonce, []byte(value), nil)
+	cipheredText := gcmInstance.Seal(nonce, nonce, value, nil)
 
 	return cipheredText
 }
@@ -33,12 +33,10 @@ func Decrypt(ciphered []byte, keyPhrase string) string {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Println(1)
 	gcmInstance, err := cipher.NewGCM(aesBlock)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Println(2)
 	nonceSize := gcmInstance.NonceSize()
 	nonce, cipheredText := ciphered[:nonceSize], ciphered[nonceSize:]
 
@@ -46,6 +44,5 @@ func Decrypt(ciphered []byte, keyPhrase string) string {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Println(3)
 	return string(originalText)
 }
