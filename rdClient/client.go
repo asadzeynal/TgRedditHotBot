@@ -1,29 +1,13 @@
 package rdClient
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
-	"time"
 
 	db "github.com/asadzeynal/TgRedditHotBot/db/sqlc"
 	"github.com/asadzeynal/TgRedditHotBot/util"
 )
-
-const AuthUrl = "https://www.reddit.com/api/v1/access_token"
-const RandomPostUrl = "https://oauth.reddit.com/r/all/top"
-const AuthParam = "grant_type=client_credentials"
-
-type RedditAccessToken struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int    `json:"expires_in"`
-	Scope       string `json:"scope"`
-	RefreshAt   time.Time
-}
 
 type RedditVideo struct {
 	Height   int
@@ -47,56 +31,19 @@ type Client struct {
 	store  db.Store
 }
 
+var client *Client
+
 func New(config *util.Config, store db.Store) (*Client, error) {
-	client := Client{
+	client = &Client{
 		config: config,
 		token:  &RedditAccessToken{},
 		store:  store,
 	}
-
-	client.LoadRedditConfig()
-
-	expiresAt, err := time.Parse(time.RFC3339, config.TokenRefreshAt)
-	if err != nil {
-		config.TokenRefreshAt = ""
-	}
 	client.token.AccessToken = config.RedditAccessToken
 	client.token.RefreshAt = expiresAt
 
-	if time.Now().After(expiresAt) {
-		err := client.fetchAccessToken()
-		if err != nil {
-			return &Client{}, fmt.Errorf("error while fetching reddit access token: %v", err)
-		}
-	}
-
-	client.scheduleTokenUpdate()
-
 	log.Println("Initialized Reddit client")
-	return &client, nil
-}
-
-// Schedules a reddit token refresh each n seconds, where n = token.ExpiresIn
-func (c *Client) scheduleTokenUpdate() {
-	until := time.Until(c.token.RefreshAt) - 60*time.Second
-	if until < 0 {
-		until = 0
-	}
-
-	ticker := time.NewTicker(until)
-	go func() {
-		for {
-			<-ticker.C
-			err := c.fetchAccessToken()
-			if err != nil {
-				log.Println(err)
-				// Try again in a minute
-				ticker.Reset(60 * time.Second)
-				continue
-			}
-			ticker.Reset(time.Until(c.token.RefreshAt) - 60*time.Second)
-		}
-	}()
+	return client, nil
 }
 
 // FetchRandomPost Fetches 100 top posts from a /r/all subreddit
@@ -130,66 +77,4 @@ func (c *Client) FetchPosts() ([]*RedditPost, error) {
 	}
 
 	return resBody, nil
-}
-
-// TODO: Implement timeout
-// Fetches the Reddit access token and saves it to Server struct as RedditAccessToken
-func (c *Client) fetchAccessToken() error {
-	paramsReader := strings.NewReader(AuthParam)
-	req, err := http.NewRequest(http.MethodPost, AuthUrl, paramsReader)
-	if err != nil {
-		return fmt.Errorf("error while creating request: %v", err)
-	}
-
-	authString := fmt.Sprintf("Basic %s", c.config.RedditAuth)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Authorization", authString)
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("error while making request: %v", err)
-	}
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch refresh token, status code: %v", res.StatusCode)
-	}
-	defer res.Body.Close()
-
-	var token RedditAccessToken
-	err = json.NewDecoder(res.Body).Decode(&token)
-
-	token.RefreshAt = time.Now().Add(time.Duration(token.ExpiresIn-60) * time.Second)
-	if err != nil {
-		return fmt.Errorf("error when processing response: %v", err)
-	}
-
-	log.Println("Successfully updated reddit token")
-	c.token = &token
-
-	c.SaveRedditConfig(db.ConfigData{RedditAccessToken: []byte(token.AccessToken), RedditTokenToRefreshAt: token.RefreshAt.Format(time.RFC3339)})
-
-	return nil
-}
-
-func (c *Client) LoadRedditConfig() error {
-	redditConf, err := c.store.GetConfig(context.Background(), "reddit")
-	if err != nil {
-		return fmt.Errorf("could not load config from DB: %v", err)
-	}
-	token := util.Decrypt(redditConf.Data.RedditAccessToken, c.config.EncryptionKey)
-
-	c.config.Set("TGRHB_REDDIT_ACCESS_TOKEN", token)
-	c.config.Set("TGRHB_TOKEN_REFRESH_AT", redditConf.Data.RedditTokenToRefreshAt)
-	return nil
-}
-
-func (c *Client) SaveRedditConfig(redditConf db.ConfigData) error {
-	encryptedAK := util.Encrypt(redditConf.RedditAccessToken, c.config.EncryptionKey)
-	c.store.UpdateConfig(context.Background(), db.UpdateConfigParams{
-		ConfigType: "reddit",
-		Data: db.ConfigData{
-			RedditAccessToken:      encryptedAK,
-			RedditTokenToRefreshAt: redditConf.RedditTokenToRefreshAt,
-		},
-	})
-	return nil
 }
