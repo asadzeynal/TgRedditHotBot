@@ -12,19 +12,31 @@ import (
 	"github.com/asadzeynal/TgRedditHotBot/tgServer"
 	"github.com/asadzeynal/TgRedditHotBot/util"
 	"github.com/jackc/pgx/v5"
+	"go.uber.org/zap"
 )
 
 const (
 	dbPopulationInterval = time.Hour
 )
 
-var logger util.Logger = util.NewCustomLog()
-
 func main() {
+
+	// var logger util.Logger = util.NewCustomLog()
+
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
+	defer logger.Sync()
+
+	sugar := logger.Sugar()
+
 	config, err := util.LoadConfig(".")
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+
+	sugar.Infow("starting app", "event", "configLoaded", "env", config.Environment)
 
 	conn, err := pgx.Connect(context.Background(), config.DBSource)
 	if err != nil {
@@ -32,11 +44,11 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	store := db.NewStore(conn, logger)
+	store := db.NewStore(conn, sugar)
 
 	err = LoadRedditConfig(store, config)
 	if err != nil {
-		fmt.Printf("Unable to load config: %v\n", err)
+		sugar.Infof("Unable to load config: %v\n", err)
 	}
 
 	internal.ScheduleTokenUpdate(config, store)

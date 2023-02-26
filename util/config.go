@@ -18,6 +18,7 @@ type Config struct {
 	DBDriver          string `koanf:"TGRHB_DB_DRIVER"`
 	DBSource          string `koanf:"TGRHB_DB_SOURCE"`
 	EncryptionKey     string `koanf:"TGRHB_ENCRYPTION_KEY"`
+	Environment       string `koanf:"TGRHB_ENV"`
 }
 
 const envVariableName = "TGRHB_ENV"
@@ -45,9 +46,8 @@ func LoadConfig(path string) (*Config, error) {
 		}
 	}
 
-	fmt.Printf("Loading config on environment: %v\n", environment)
-
 	k.Unmarshal("", &config)
+	config.Environment = environment
 
 	return &config, nil
 }

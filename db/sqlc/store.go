@@ -38,7 +38,7 @@ func NewStore(db *pgx.Conn, logger util.Logger) Store {
 func (store *SQLStore) RefreshPostsCount(ctx context.Context) error {
 	_, err := store.db.Exec(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY posts_count;")
 	if err != nil {
-		return fmt.Errorf("Unable to refresh posts_count: %v", err)
+		return fmt.Errorf("unable to refresh posts_count: %v", err)
 	}
 	store.logger.Info("Refreshed posts_count materialized view")
 	return nil
@@ -47,7 +47,7 @@ func (store *SQLStore) RefreshPostsCount(ctx context.Context) error {
 func (store *SQLStore) FetchFullRandomPost(ctx context.Context) (FullPost, error) {
 	postsCount, err := store.GetTotalCount(ctx)
 	if err != nil {
-		return FullPost{}, fmt.Errorf("Unable to fetch posts count: %v", err)
+		return FullPost{}, fmt.Errorf("unable to fetch posts count: %v", err)
 	}
 
 	postRowNum := util.RandomInRange(0, int(postsCount))
@@ -55,18 +55,18 @@ func (store *SQLStore) FetchFullRandomPost(ctx context.Context) (FullPost, error
 
 	p, err := store.GetRandomPost(ctx, int32(postRowNum))
 	if err != nil {
-		return FullPost{}, fmt.Errorf("Unable to fetch random post: %v", err)
+		return FullPost{}, fmt.Errorf("unable to fetch random post: %v", err)
 	}
 	store.logger.Info("post at random num %v: %v", postRowNum, p)
 
 	imgs, err := store.GetImagesByPost(ctx, p.ID)
 	if err != nil {
-		return FullPost{}, fmt.Errorf("Unable to fetch random post: %v", err)
+		return FullPost{}, fmt.Errorf("unable to fetch random post: %v", err)
 	}
 
 	vids, err := store.GetVideosByPost(ctx, p.ID)
 	if err != nil {
-		return FullPost{}, fmt.Errorf("Unable to fetch random post: %v", err)
+		return FullPost{}, fmt.Errorf("unable to fetch random post: %v", err)
 	}
 	store.logger.Info("postId: %v, postImages: %v, postVideos: %v", p.ID, imgs, vids)
 
