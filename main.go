@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	db "github.com/asadzeynal/TgRedditHotBot/db/sqlc"
@@ -19,6 +21,15 @@ const (
 )
 
 func main() {
+	go func() error {
+		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "ok") })
+		err := http.ListenAndServe(":8090", nil)
+		if err != nil {
+			return fmt.Errorf("error while creating http server: %v", err)
+		}
+		return nil
+	}()
+
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("can't initialize zap logger: %v", err)
