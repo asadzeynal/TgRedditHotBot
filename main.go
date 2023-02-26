@@ -26,7 +26,6 @@ type RedditAccessToken struct {
 	TokenType   string `json:"token_type"`
 	ExpiresIn   int    `json:"expires_in"`
 	Scope       string `json:"scope"`
-	RefreshAt   time.Time
 }
 
 const AuthUrl = "https://www.reddit.com/api/v1/access_token"
@@ -34,12 +33,10 @@ const RandomPostUrl = "https://oauth.reddit.com/r/all/top"
 const AuthParam = "grant_type=client_credentials"
 
 var logger util.Logger = util.NewCustomLog()
-var config *util.Config
-var store db.Store
 
 func main() {
 	var err error
-	config, err = util.LoadConfig(".")
+	config, err := util.LoadConfig(".")
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
@@ -50,7 +47,7 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	store = db.NewStore(conn, logger)
+	store := db.NewStore(conn, logger)
 
 	LoadRedditConfig()
 	scheduleTokenUpdate()
@@ -71,39 +68,41 @@ func main() {
 	}
 }
 
-func scheduleTokenUpdate() {
+func scheduleTokenUpdate(config *util.Config) {
 	expiresAt, err := time.Parse(time.RFC3339, config.TokenRefreshAt)
 	if err != nil {
 		config.TokenRefreshAt = ""
 	}
 
-	nextRefreshAfter := time.Until(expiresAt)
-	if nextRefreshAfter < 1 {
-		nextRefreshAfter = 1
+	initialRefreshAfter := time.Until(expiresAt)
+	if initialRefreshAfter < 1 {
+		initialRefreshAfter = 1
 	}
 
-	util.Schedule(nextRefreshAfter, updateToken)
+	var f util.Func[string, RedditAccessToken] = func(redditAuth string) (time.Duration, RedditAccessToken, error) {
+		return updateToken(redditAuth)
+	}
+
+	p := util.Schedule(initialRefreshAfter, config.RedditAuth, f)
+	SaveRedditConfig(token.AccessToken, nextRefreshAt)
+
 }
 
-// Schedules a reddit token refresh each n seconds, where n = token.ExpiresIn
-func updateToken() time.Duration {
-	token, err := fetchAccessToken(config.RedditAccessToken)
+func updateToken(redditAuth string) (time.Duration, RedditAccessToken, error) {
+	token, err := fetchAccessToken(redditAuth)
 	if err != nil {
-		fmt.Errorf("error while fetching reddit access token: %v", err)
-		return 60 * time.Second
+		return 60 * time.Second, RedditAccessToken{}, fmt.Errorf("error while fetching reddit access token: %v", err)
 	}
-	SaveRedditConfig(token.AccessToken, token.RefreshAt)
+	nextRefreshAt := time.Now().Add(time.Duration(token.ExpiresIn))
 
-	nextRefreshAfter := time.Until(token.RefreshAt) - 60*time.Second
+	nextRefreshAfter := time.Until(nextRefreshAt) - 60*time.Second
 	if nextRefreshAfter < 1 {
 		nextRefreshAfter = 1
 	}
 
-	return nextRefreshAfter
+	return nextRefreshAfter, token, nil
 }
 
-// TODO: Implement timeout
-// Fetches the Reddit access token and saves it to Server struct as RedditAccessToken
 func fetchAccessToken(redditAuth string) (RedditAccessToken, error) {
 	paramsReader := strings.NewReader(AuthParam)
 	req, err := http.NewRequest(http.MethodPost, AuthUrl, paramsReader)
@@ -127,7 +126,6 @@ func fetchAccessToken(redditAuth string) (RedditAccessToken, error) {
 	var token RedditAccessToken
 	err = json.NewDecoder(res.Body).Decode(&token)
 
-	token.RefreshAt = time.Now().Add(time.Duration(token.ExpiresIn-60) * time.Second)
 	if err != nil {
 		return RedditAccessToken{}, fmt.Errorf("error when processing response: %v", err)
 	}
