@@ -26,6 +26,9 @@ INSERT INTO config(
         config_type,
         data
     ) VALUES ($1, $2)
+    ON CONFLICT (config_type) DO UPDATE 
+        SET 
+        data = excluded.data
 `
 
 type UpdateConfigParams struct {

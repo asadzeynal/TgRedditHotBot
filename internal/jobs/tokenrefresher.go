@@ -23,7 +23,17 @@ type RedditAccessToken struct {
 const AuthUrl = "https://www.reddit.com/api/v1/access_token"
 const AuthParam = "grant_type=client_credentials"
 
-func ScheduleTokenUpdate(config *util.Config, store db.Store) {
+func ScheduleTokenUpdate(config *util.Config, store db.Store) chan struct{} {
+	configReady := make(chan struct{})
+	err := LoadRedditConfig(store, config)
+	if err != nil {
+		fmt.Printf("Unable to load config: %v\n", err)
+	}
+
+	if config.RedditAccessToken != "" {
+		configReady <- struct{}{}
+	}
+
 	expiresAt, err := time.Parse(time.RFC3339, config.TokenRefreshAt)
 	if err != nil {
 		config.TokenRefreshAt = ""
@@ -46,10 +56,11 @@ func ScheduleTokenUpdate(config *util.Config, store db.Store) {
 				fmt.Printf("could not refresh token: %v\n", err)
 				continue
 			}
-			SaveRedditConfig(store, val.AccessToken, val.nextRefreshAt, config.EncryptionKey)
+			SaveRedditConfig(store, config, val.AccessToken, val.nextRefreshAt, config.EncryptionKey)
+			close(configReady)
 		}
 	}()
-
+	return configReady
 }
 
 func getToken(redditAuth string) (time.Duration, RedditAccessToken, error) {
@@ -96,7 +107,9 @@ func fetchToken(redditAuth string) (RedditAccessToken, error) {
 	return token, nil
 }
 
-func SaveRedditConfig(store db.Store, token string, refreshAt time.Time, key string) error {
+func SaveRedditConfig(store db.Store, config *util.Config, token string, refreshAt time.Time, key string) error {
+	config.Set("TGRHB_REDDIT_ACCESS_TOKEN", token)
+	config.Set("TGRHB_TOKEN_REFRESH_AT", refreshAt.Format(time.RFC3339))
 	encryptedAK := util.Encrypt([]byte(token), key)
 	store.UpdateConfig(context.Background(), db.UpdateConfigParams{
 		ConfigType: "reddit",
@@ -105,5 +118,17 @@ func SaveRedditConfig(store db.Store, token string, refreshAt time.Time, key str
 			RedditTokenToRefreshAt: refreshAt.Format(time.RFC3339),
 		},
 	})
+	return nil
+}
+
+func LoadRedditConfig(store db.Store, config *util.Config) error {
+	redditConf, err := store.GetConfig(context.Background(), "reddit")
+	if err != nil {
+		return fmt.Errorf("could not load config from DB: %v", err)
+	}
+	token := util.Decrypt(redditConf.Data.RedditAccessToken, config.EncryptionKey)
+
+	config.Set("TGRHB_REDDIT_ACCESS_TOKEN", token)
+	config.Set("TGRHB_TOKEN_REFRESH_AT", redditConf.Data.RedditTokenToRefreshAt)
 	return nil
 }

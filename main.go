@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -43,34 +42,15 @@ func main() {
 
 	store := db.NewStore(conn, sugar)
 
-	err = LoadRedditConfig(store, config)
-	if err != nil {
-		sugar.Infof("Unable to load config: %v\n", err)
-	}
-
-	internal.ScheduleTokenUpdate(config, store)
+	configReady := internal.ScheduleTokenUpdate(config, store)
+	<-configReady
 
 	client := rdClient.New(config, store)
 
 	internal.ScheduleDbPopulation(store, client, dbPopulationInterval)
-	if err != nil {
-		log.Fatalf("failed to perform initial populator run: %v", err)
-	}
 
 	err = tgServer.Start(config, store)
 	if err != nil {
 		log.Fatalf("failed to start tg server: %v", err)
 	}
-}
-
-func LoadRedditConfig(store db.Store, config *util.Config) error {
-	redditConf, err := store.GetConfig(context.Background(), "reddit")
-	if err != nil {
-		return fmt.Errorf("could not load config from DB: %v", err)
-	}
-	token := util.Decrypt(redditConf.Data.RedditAccessToken, config.EncryptionKey)
-
-	config.Set("TGRHB_REDDIT_ACCESS_TOKEN", token)
-	config.Set("TGRHB_TOKEN_REFRESH_AT", redditConf.Data.RedditTokenToRefreshAt)
-	return nil
 }

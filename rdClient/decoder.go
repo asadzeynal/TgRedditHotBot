@@ -13,7 +13,6 @@ func DecodeRedditResponse(body *io.ReadCloser) ([]*RedditPost, error) {
 	r := RedditPostResponse{}
 	err := json.NewDecoder(*body).Decode(&r)
 	if err != nil {
-		fmt.Printf("could not decode reddit response: %v", err)
 		return nil, fmt.Errorf("could not decode reddit response: %v", err)
 	}
 
