@@ -8,7 +8,7 @@ import (
 type Logger interface {
 	Info(s string, v ...any)
 	Warn(s string, v ...any)
-	Error(s string, v ...any)
+	Error(s error, v ...any)
 }
 
 type CustomLog struct {
@@ -39,6 +39,6 @@ func (logger *CustomLog) Warn(s string, v ...any) {
 	logger.infoLogger.Printf(s+"\n", v...)
 }
 
-func (logger *CustomLog) Error(s string, v ...any) {
-	logger.errorLogger.Printf(s+"\n", v...)
+func (logger *CustomLog) Error(s error, v ...any) {
+	logger.errorLogger.Printf(s.Error()+"\n", v...)
 }

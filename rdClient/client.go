@@ -26,28 +26,26 @@ type RedditPost struct {
 }
 
 type Client struct {
-	token  *RedditAccessToken
 	config *util.Config
 	store  db.Store
 }
 
-var client *Client
+const RandomPostUrl = "https://oauth.reddit.com/r/all/top"
 
-func New(config *util.Config, store db.Store) (*Client, error) {
-	client = &Client{
+var client Client
+
+func New(config *util.Config, store db.Store) Client {
+	client = Client{
 		config: config,
-		token:  &RedditAccessToken{},
 		store:  store,
 	}
-	client.token.AccessToken = config.RedditAccessToken
-	client.token.RefreshAt = expiresAt
 
 	log.Println("Initialized Reddit client")
-	return client, nil
+	return client
 }
 
 // FetchRandomPost Fetches 100 top posts from a /r/all subreddit
-func (c *Client) FetchPosts() ([]*RedditPost, error) {
+func (c Client) FetchPosts() ([]*RedditPost, error) {
 	var resBody []*RedditPost
 	req, err := http.NewRequest(http.MethodGet, RandomPostUrl, nil)
 	if err != nil {
@@ -58,7 +56,7 @@ func (c *Client) FetchPosts() ([]*RedditPost, error) {
 	q.Add("limit", "100")
 	req.URL.RawQuery = q.Encode()
 
-	authString := fmt.Sprintf("Bearer %s", c.token.AccessToken)
+	authString := fmt.Sprintf("Bearer %s", c.config.RedditAccessToken)
 	req.Header.Add("Authorization", authString)
 	req.Header.Add("User-Agent", "TgRedditHot/0.0.1")
 

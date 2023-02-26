@@ -1,14 +1,53 @@
-package populator
+package internal
 
 import (
 	"context"
 	"fmt"
+	"time"
 
 	db "github.com/asadzeynal/TgRedditHotBot/db/sqlc"
 	"github.com/asadzeynal/TgRedditHotBot/rdClient"
+	"github.com/asadzeynal/TgRedditHotBot/util"
 )
 
-func Run(store db.Store, client *rdClient.Client) error {
+func ScheduleDbPopulation(store db.Store, client rdClient.Client, interval time.Duration) {
+	initialDuration := 10 * time.Second
+	type input struct {
+		store  db.Store
+		client rdClient.Client
+	}
+	i := input{
+		store:  store,
+		client: client,
+	}
+
+	var f util.Func[input, struct{}] = func(i input) (time.Duration, struct{}, error) {
+		err := populate(i.store, i.client)
+		if err != nil {
+			return 60 * time.Second, struct{}{}, err
+		}
+		err = refreshPostsCount(i.store)
+		if err != nil {
+			return interval, struct{}{}, err
+		}
+
+		return interval, struct{}{}, nil
+	}
+
+	p := util.Schedule(initialDuration, i, f)
+	go func() {
+		for {
+			_, err := p.Get()
+			if err != nil {
+				fmt.Printf("could not populate db: %v\n", err)
+				continue
+			}
+		}
+	}()
+
+}
+
+func populate(store db.Store, client rdClient.Client) error {
 	posts, err := client.FetchPosts()
 	if err != nil {
 		return fmt.Errorf("error while retrieving posts: %v ", err)
@@ -52,11 +91,11 @@ func Run(store db.Store, client *rdClient.Client) error {
 	return nil
 }
 
-func RefreshPostsCount(store db.Store) error {
+func refreshPostsCount(store db.Store) error {
 	if sqlStore, ok := store.(*db.SQLStore); ok {
 		err := sqlStore.RefreshPostsCount(context.Background())
 		if err != nil {
-			return fmt.Errorf("Unable to refresh Materialized View posts_count: %v", err)
+			return fmt.Errorf("unable to refresh Materialized View posts_count: %v", err)
 		}
 		return nil
 	}
