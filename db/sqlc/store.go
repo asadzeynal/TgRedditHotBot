@@ -51,13 +51,13 @@ func (store *SQLStore) FetchFullRandomPost(ctx context.Context) (FullPost, error
 	}
 
 	postRowNum := util.RandomInRange(0, int(postsCount))
-	store.logger.Info("total count: %v, random num: %v", postsCount, postRowNum)
+	store.logger.Infow("fetched total num and generated a random num", "totalPostCount", postsCount, "random num", postRowNum)
 
 	p, err := store.GetRandomPost(ctx, int32(postRowNum))
 	if err != nil {
 		return FullPost{}, fmt.Errorf("unable to fetch random post: %v", err)
 	}
-	store.logger.Info("post at random num %v: %v", postRowNum, p)
+	store.logger.Info("post fetched", "postOffset", postRowNum, "post", p)
 
 	imgs, err := store.GetImagesByPost(ctx, p.ID)
 	if err != nil {
@@ -68,7 +68,7 @@ func (store *SQLStore) FetchFullRandomPost(ctx context.Context) (FullPost, error
 	if err != nil {
 		return FullPost{}, fmt.Errorf("unable to fetch random post: %v", err)
 	}
-	store.logger.Info("postId: %v, postImages: %v, postVideos: %v", p.ID, imgs, vids)
+	store.logger.Info("Fetched images and photos", "event", "mediaFetched", "postId", p.ID, "postImages", imgs, "postVideos", vids)
 
 	var contentType string
 	postImage := PostImage{}

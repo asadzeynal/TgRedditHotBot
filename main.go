@@ -20,9 +20,6 @@ const (
 )
 
 func main() {
-
-	// var logger util.Logger = util.NewCustomLog()
-
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("can't initialize zap logger: %v", err)
