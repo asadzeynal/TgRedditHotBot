@@ -43,7 +43,7 @@ func ScheduleTokenUpdate(config *util.Config, store db.Store) (chan struct{}, ch
 
 	initialRefreshAfter := time.Until(expiresAt)
 	if initialRefreshAfter < 1 {
-		initialRefreshAfter = 1
+		initialRefreshAfter = 5 * time.Second
 	}
 
 	var f util.Func[string, RedditAccessToken] = func(redditAuth string) (time.Duration, RedditAccessToken, error) {
@@ -56,7 +56,6 @@ func ScheduleTokenUpdate(config *util.Config, store db.Store) (chan struct{}, ch
 		for {
 			val, err := p.Get()
 			if err != nil {
-				fmt.Println("invocation1")
 				fmt.Printf("could not refresh token: %v\n", err)
 				continue
 			}
@@ -80,7 +79,7 @@ func getToken(redditAuth string) (time.Duration, RedditAccessToken, error) {
 
 	nextRefreshAfter := time.Until(token.nextRefreshAt) - 60*time.Second
 	if nextRefreshAfter < 1 {
-		nextRefreshAfter = 1
+		nextRefreshAfter = 5 * time.Second
 	}
 
 	return nextRefreshAfter, token, nil
