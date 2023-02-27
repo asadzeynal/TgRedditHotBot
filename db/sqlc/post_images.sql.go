@@ -71,16 +71,16 @@ func (q *Queries) GetImagesByPost(ctx context.Context, post string) ([]PostImage
 
 const setImageFileId = `-- name: SetImageFileId :exec
 UPDATE post_images
-SET tg_file_id = $2
-WHERE post = $1
+SET tg_file_id = $1
+WHERE post = $2
 `
 
 type SetImageFileIdParams struct {
-	Post     string `json:"post"`
 	TgFileID string `json:"tg_file_id"`
+	Post     string `json:"post"`
 }
 
 func (q *Queries) SetImageFileId(ctx context.Context, arg SetImageFileIdParams) error {
-	_, err := q.db.Exec(ctx, setImageFileId, arg.Post, arg.TgFileID)
+	_, err := q.db.Exec(ctx, setImageFileId, arg.TgFileID, arg.Post)
 	return err
 }

@@ -13,5 +13,5 @@ WHERE post = $1 LIMIT 10;
 
 -- name: SetImageFileId :exec
 UPDATE post_images
-SET tg_file_id = $2
-WHERE post = $1;
+SET tg_file_id = $1
+WHERE post = $2;

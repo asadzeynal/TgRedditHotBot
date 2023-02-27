@@ -15,5 +15,5 @@ WHERE post = $1 LIMIT 5;
 
 -- name: SetVideoFileId :exec
 UPDATE post_videos
-SET tg_file_id = $2
-WHERE post = $1;
+SET tg_file_id = $1
+WHERE post = $2;

@@ -27,6 +27,16 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 	}
 
 	caption := fmt.Sprintf("%s\n\n%s", post.Title, post.Url)
+	var toSend telebot.Sendable
+
+	storeFileId := func(postId string, fileId string) error {
+		switch post.ContentType {
+		case "video":
+			return s.store.SetVideoFileId(context.Background(), db.SetVideoFileIdParams{Post: postId, TgFileID: fileId})
+		default:
+			return s.store.SetImageFileId(context.Background(), db.SetImageFileIdParams{Post: postId, TgFileID: fileId})
+		}
+	}
 
 	switch post.ContentType {
 	case "image":
@@ -36,15 +46,7 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 		} else {
 			file = telebot.FromURL(post.Image.Url)
 		}
-		photo := &telebot.Photo{File: file, Caption: caption}
-		err = ctx.SendAlbum(telebot.Album{photo}, menu)
-		if err != nil {
-			return fmt.Errorf("could not send response\n url: %v\n error: %v", post.Image.Url, err)
-		}
-
-		if post.Image.TgFileID == "" && photo.FileID != "" {
-			s.store.SetImageFileId(context.Background(), db.SetImageFileIdParams{Post: post.ID, TgFileID: photo.FileID})
-		}
+		toSend = &telebot.Photo{File: file, Caption: caption}
 	case "gif":
 		var file telebot.File
 		if post.Image.TgFileID != "" {
@@ -52,31 +54,45 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 		} else {
 			file = telebot.FromURL(post.Image.Url)
 		}
-		gif := &telebot.Animation{File: file, Caption: caption}
-		err = ctx.Send(gif, menu)
-		if err != nil {
-			return fmt.Errorf("could not send response\n url: %v\n error: %v", post.Image.Url, err)
-		}
-		if post.Image.TgFileID == "" && gif.FileID != "" {
-			s.store.SetImageFileId(context.Background(), db.SetImageFileIdParams{Post: post.ID, TgFileID: gif.FileID})
-		}
+		toSend = &telebot.Animation{File: file, Caption: caption}
 	case "video":
 		var file telebot.File
 		if post.Video.TgFileID != "" {
-			file = telebot.File{FileID: post.Image.TgFileID}
+			file = telebot.File{FileID: post.Video.TgFileID}
 		} else {
 			file = telebot.FromURL(post.Video.Url)
 		}
-		video := constructVideo(post, caption, file)
-		err = ctx.SendAlbum(telebot.Album{video}, menu)
-		if err != nil {
-			return fmt.Errorf("could not send response\n url: %v\n error: %v", post.Video, err)
-		}
-		if post.Video.TgFileID == "" && video.FileID != "" {
-			s.store.SetVideoFileId(context.Background(), db.SetVideoFileIdParams{Post: post.ID, TgFileID: video.FileID})
-		}
+		toSend = constructVideo(post, caption, file)
+
 	default:
 		return fmt.Errorf("unknown content type: %v postId: %v", post.ContentType, post.ID)
+	}
+
+	err = ctx.Send(toSend, menu)
+	if err != nil {
+		ctx.Send("Please try again later", menu)
+		return fmt.Errorf("could not send response. post: %v, error: %v", post.ID, err)
+	}
+
+	var fileId, storedFileId string
+	if toSendImg, ok := toSend.(*telebot.Photo); ok {
+		fileId = toSendImg.FileID
+		storedFileId = post.Image.TgFileID
+	}
+	if toSendVid, ok := toSend.(*telebot.Video); ok {
+		fileId = toSendVid.FileID
+		storedFileId = post.Video.TgFileID
+	}
+	if toSendGif, ok := toSend.(*telebot.Animation); ok {
+		fileId = toSendGif.FileID
+		storedFileId = post.Image.TgFileID
+	}
+
+	if storedFileId == "" && fileId != "" {
+		err = storeFileId(post.ID, fileId)
+		if err != nil {
+			fmt.Printf("could not update fileId: %v ", err)
+		}
 	}
 
 	return nil
