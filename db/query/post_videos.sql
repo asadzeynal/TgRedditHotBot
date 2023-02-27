@@ -12,3 +12,8 @@ $1, $2, $3, $4, $5
 -- name: GetVideosByPost :many
 SELECT * FROM post_videos
 WHERE post = $1 LIMIT 5;
+
+-- name: SetVideoFileId :exec
+UPDATE post_videos
+SET tg_file_id = $2
+WHERE post = $1;

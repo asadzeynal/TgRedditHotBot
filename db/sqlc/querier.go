@@ -17,6 +17,8 @@ type Querier interface {
 	GetRandomPost(ctx context.Context, offset int32) (Post, error)
 	GetTotalCount(ctx context.Context) (int64, error)
 	GetVideosByPost(ctx context.Context, post string) ([]PostVideo, error)
+	SetImageFileId(ctx context.Context, arg SetImageFileIdParams) error
+	SetVideoFileId(ctx context.Context, arg SetVideoFileIdParams) error
 	UpdateConfig(ctx context.Context, arg UpdateConfigParams) error
 }
 

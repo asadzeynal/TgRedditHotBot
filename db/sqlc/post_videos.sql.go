@@ -82,3 +82,19 @@ func (q *Queries) GetVideosByPost(ctx context.Context, post string) ([]PostVideo
 	}
 	return items, nil
 }
+
+const setVideoFileId = `-- name: SetVideoFileId :exec
+UPDATE post_videos
+SET tg_file_id = $2
+WHERE post = $1
+`
+
+type SetVideoFileIdParams struct {
+	Post     string `json:"post"`
+	TgFileID string `json:"tg_file_id"`
+}
+
+func (q *Queries) SetVideoFileId(ctx context.Context, arg SetVideoFileIdParams) error {
+	_, err := q.db.Exec(ctx, setVideoFileId, arg.Post, arg.TgFileID)
+	return err
+}
