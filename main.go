@@ -21,15 +21,6 @@ const (
 )
 
 func main() {
-	go func() error {
-		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "ok") })
-		err := http.ListenAndServe(":8090", nil)
-		if err != nil {
-			return fmt.Errorf("error while creating http server: %v", err)
-		}
-		return nil
-	}()
-
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("can't initialize zap logger: %v", err)
@@ -50,15 +41,35 @@ func main() {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
 	defer conn.Close(context.Background())
+	sugar.Infow("database connection created", "event", "dbConnected")
 
 	store := db.NewStore(conn, sugar)
 
-	configReady := internal.ScheduleTokenUpdate(config, store)
-	<-configReady
+	configReadyFromStore, configReadyFromFetch := internal.ScheduleTokenUpdate(config, store)
+
+	select {
+	case <-configReadyFromStore:
+	case <-configReadyFromFetch:
+	}
+
+	sugar.Infow("reddit config ready", "event", "dbConfigReady")
 
 	client := rdClient.New(config, store)
 
+	sugar.Infow("reddit client instance created", "event", "redditClientReady")
+
 	internal.ScheduleDbPopulation(store, client, dbPopulationInterval)
+
+	sugar.Infow("scheduled db population", "event", "dbPopulationScheduled")
+
+	go func() error {
+		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "ok") })
+		err := http.ListenAndServe(":8090", nil)
+		if err != nil {
+			return fmt.Errorf("error while creating http server: %v", err)
+		}
+		return nil
+	}()
 
 	err = tgServer.Start(config, store)
 	if err != nil {

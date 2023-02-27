@@ -23,15 +23,17 @@ type RedditAccessToken struct {
 const AuthUrl = "https://www.reddit.com/api/v1/access_token"
 const AuthParam = "grant_type=client_credentials"
 
-func ScheduleTokenUpdate(config *util.Config, store db.Store) chan struct{} {
-	configReady := make(chan struct{})
+func ScheduleTokenUpdate(config *util.Config, store db.Store) (chan struct{}, chan struct{}) {
+	configReadyFromStore := make(chan struct{})
+	configReadyFromFetch := make(chan struct{})
+
 	err := LoadRedditConfig(store, config)
 	if err != nil {
 		fmt.Printf("Unable to load config: %v\n", err)
 	}
 
 	if config.RedditAccessToken != "" {
-		configReady <- struct{}{}
+		close(configReadyFromStore)
 	}
 
 	expiresAt, err := time.Parse(time.RFC3339, config.TokenRefreshAt)
@@ -49,18 +51,24 @@ func ScheduleTokenUpdate(config *util.Config, store db.Store) chan struct{} {
 	}
 
 	p := util.Schedule(initialRefreshAfter, config.RedditAuth, f)
-	go func() {
+	go func(c chan struct{}) {
+		isFirstInvocation := true
 		for {
 			val, err := p.Get()
 			if err != nil {
+				fmt.Println("invocation1")
 				fmt.Printf("could not refresh token: %v\n", err)
 				continue
 			}
 			SaveRedditConfig(store, config, val.AccessToken, val.nextRefreshAt, config.EncryptionKey)
-			close(configReady)
+			if isFirstInvocation {
+				close(c)
+			}
+			isFirstInvocation = false
 		}
-	}()
-	return configReady
+	}(configReadyFromFetch)
+
+	return configReadyFromStore, configReadyFromFetch
 }
 
 func getToken(redditAuth string) (time.Duration, RedditAccessToken, error) {
@@ -68,7 +76,7 @@ func getToken(redditAuth string) (time.Duration, RedditAccessToken, error) {
 	if err != nil {
 		return 60 * time.Second, RedditAccessToken{}, fmt.Errorf("error while fetching reddit access token: %v", err)
 	}
-	token.nextRefreshAt = time.Now().Add(time.Duration(token.ExpiresIn))
+	token.nextRefreshAt = time.Now().Add(time.Duration(token.ExpiresIn) * time.Second)
 
 	nextRefreshAfter := time.Until(token.nextRefreshAt) - 60*time.Second
 	if nextRefreshAfter < 1 {
