@@ -16,7 +16,7 @@ INSERT INTO post_images (
     is_gif
 ) VALUES (
 $1, $2, $3
-) RETURNING id, post, url, is_gif
+) RETURNING id, post, url, is_gif, tg_file_id
 `
 
 type CreatePostImageParams struct {
@@ -33,12 +33,13 @@ func (q *Queries) CreatePostImage(ctx context.Context, arg CreatePostImageParams
 		&i.Post,
 		&i.Url,
 		&i.IsGif,
+		&i.TgFileID,
 	)
 	return i, err
 }
 
 const getImagesByPost = `-- name: GetImagesByPost :many
-SELECT id, post, url, is_gif FROM post_images
+SELECT id, post, url, is_gif, tg_file_id FROM post_images
 WHERE post = $1 LIMIT 10
 `
 
@@ -56,6 +57,7 @@ func (q *Queries) GetImagesByPost(ctx context.Context, post string) ([]PostImage
 			&i.Post,
 			&i.Url,
 			&i.IsGif,
+			&i.TgFileID,
 		); err != nil {
 			return nil, err
 		}

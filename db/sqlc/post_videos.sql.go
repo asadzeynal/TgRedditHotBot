@@ -18,7 +18,7 @@ INSERT INTO post_videos (
     url
 ) VALUES (
 $1, $2, $3, $4, $5
-) RETURNING id, post, height, width, duration, url
+) RETURNING id, post, height, width, duration, url, tg_file_id
 `
 
 type CreatePostVideoParams struct {
@@ -45,12 +45,13 @@ func (q *Queries) CreatePostVideo(ctx context.Context, arg CreatePostVideoParams
 		&i.Width,
 		&i.Duration,
 		&i.Url,
+		&i.TgFileID,
 	)
 	return i, err
 }
 
 const getVideosByPost = `-- name: GetVideosByPost :many
-SELECT id, post, height, width, duration, url FROM post_videos
+SELECT id, post, height, width, duration, url, tg_file_id FROM post_videos
 WHERE post = $1 LIMIT 5
 `
 
@@ -70,6 +71,7 @@ func (q *Queries) GetVideosByPost(ctx context.Context, post string) ([]PostVideo
 			&i.Width,
 			&i.Duration,
 			&i.Url,
+			&i.TgFileID,
 		); err != nil {
 			return nil, err
 		}

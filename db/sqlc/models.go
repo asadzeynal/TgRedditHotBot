@@ -21,10 +21,11 @@ type Post struct {
 }
 
 type PostImage struct {
-	ID    int64  `json:"id"`
-	Post  string `json:"post"`
-	Url   string `json:"url"`
-	IsGif bool   `json:"is_gif"`
+	ID       int64  `json:"id"`
+	Post     string `json:"post"`
+	Url      string `json:"url"`
+	IsGif    bool   `json:"is_gif"`
+	TgFileID bool   `json:"tg_file_id"`
 }
 
 type PostVideo struct {
@@ -34,6 +35,7 @@ type PostVideo struct {
 	Width    int32  `json:"width"`
 	Duration int32  `json:"duration"`
 	Url      string `json:"url"`
+	TgFileID bool   `json:"tg_file_id"`
 }
 
 type PostsCount struct {
