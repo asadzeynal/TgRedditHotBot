@@ -4,9 +4,10 @@ INSERT INTO post_videos (
     height,
     width,
     duration,
-    url
+    url,
+    audio_url
 ) VALUES (
-$1, $2, $3, $4, $5
+$1, $2, $3, $4, $5, $6
 ) RETURNING *;
 
 -- name: GetVideosByPost :many

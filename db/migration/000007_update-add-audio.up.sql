@@ -1,0 +1,1 @@
+ALTER TABLE post_videos ADD COLUMN "audio_url" varchar NOT NULL default '';
