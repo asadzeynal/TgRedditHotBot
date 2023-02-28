@@ -27,7 +27,8 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 	}
 
 	caption := fmt.Sprintf("%s\n\n%s", post.Title, post.Url)
-	var toSend telebot.Sendable
+	var toSend telebot.Media
+	var hasTGFileId bool
 
 	storeFileId := func(postId string, fileId string) error {
 		switch post.ContentType {
@@ -42,6 +43,7 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 	case "image":
 		var file telebot.File
 		if post.Image.TgFileID != "" {
+			hasTGFileId = true
 			file = telebot.File{FileID: post.Image.TgFileID}
 		} else {
 			file = telebot.FromURL(post.Image.Url)
@@ -50,6 +52,7 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 	case "gif":
 		var file telebot.File
 		if post.Image.TgFileID != "" {
+			hasTGFileId = true
 			file = telebot.File{FileID: post.Image.TgFileID}
 		} else {
 			file = telebot.FromURL(post.Image.Url)
@@ -58,6 +61,7 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 	case "video":
 		var file telebot.File
 		if post.Video.TgFileID != "" {
+			hasTGFileId = true
 			file = telebot.File{FileID: post.Video.TgFileID}
 		} else {
 			file = telebot.FromURL(post.Video.Url)
@@ -74,21 +78,9 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 		return fmt.Errorf("could not send response. post: %v, error: %v", post.ID, err)
 	}
 
-	var fileId, storedFileId string
-	if toSendImg, ok := toSend.(*telebot.Photo); ok {
-		fileId = toSendImg.FileID
-		storedFileId = post.Image.TgFileID
-	}
-	if toSendVid, ok := toSend.(*telebot.Video); ok {
-		fileId = toSendVid.FileID
-		storedFileId = post.Video.TgFileID
-	}
-	if toSendGif, ok := toSend.(*telebot.Animation); ok {
-		fileId = toSendGif.FileID
-		storedFileId = post.Image.TgFileID
-	}
+	fileId := toSend.MediaFile().FileID
 
-	if storedFileId == "" && fileId != "" {
+	if !hasTGFileId && fileId != "" {
 		err = storeFileId(post.ID, fileId)
 		if err != nil {
 			fmt.Printf("could not update fileId: %v ", err)
