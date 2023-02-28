@@ -78,6 +78,7 @@ func populate(store db.Store, client rdClient.Client) error {
 					Width:    int32(post.Video.Width),
 					Duration: int32(post.Video.Duration),
 					Url:      post.Video.Url,
+					AudioUrl: post.Video.AudioUrl,
 				})
 				if err != nil {
 					return fmt.Errorf("unable to store image: %v", err)

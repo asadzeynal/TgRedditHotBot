@@ -84,18 +84,42 @@ func setVideo(post *RedditPost, child *RedditPostResponseChild) error {
 		if contentLength < 20971520 {
 			width := child.Data.Media.RedditVideo.Width / (oResInt / currResInt)
 
+			replacementString := "DASH_" + videoResolutions[i]
 			post.Video = RedditVideo{
 				Height:   currResInt,
 				Width:    width,
 				Duration: child.Data.Media.RedditVideo.Duration,
-				Url:      strings.Replace(url, "DASH_"+originalRes, "DASH_"+videoResolutions[i], 1),
+				Url:      strings.Replace(url, "DASH_"+originalRes, replacementString, 1),
 			}
 
+			audioUrl, err := checkAudioUrl(post.Video.Url, replacementString)
+			if err != nil {
+				continue
+			}
+
+			post.Video.AudioUrl = audioUrl
 			post.ContentType = "video"
 			return nil
 		}
 	}
 	return fmt.Errorf("No video candidates\n")
+}
+
+func checkAudioUrl(videoUrl string, replacementString string) (string, error) {
+	audioUrl := strings.Replace(videoUrl, replacementString, "DASH_audio", 1)
+	req, err := http.NewRequest(http.MethodHead, audioUrl, nil)
+	if err != nil {
+		return "", fmt.Errorf("error while creating request: %v %v", req, err)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("error while sending request: %v %v", req, err)
+	}
+	if res.StatusCode != http.StatusOK {
+		return "", nil
+	}
+	return audioUrl, nil
+
 }
 
 func fetchVideoSize(url string) (int64, error) {
