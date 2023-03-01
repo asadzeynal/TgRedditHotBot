@@ -14,6 +14,7 @@ type RedditVideo struct {
 	Width    int
 	Duration int
 	Url      string
+	AudioUrl string
 }
 
 type RedditPost struct {

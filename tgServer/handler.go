@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	db "github.com/asadzeynal/TgRedditHotBot/db/sqlc"
 	"gopkg.in/telebot.v3"
 )
 
@@ -26,34 +27,75 @@ func (s *Server) getRandomPost(ctx telebot.Context) error {
 	}
 
 	caption := fmt.Sprintf("%s\n\n%s", post.Title, post.Url)
+	var toSend telebot.Media
+	var hasTGFileId bool
 
-	if post.ContentType == "image" {
-		photo := &telebot.Photo{File: telebot.FromURL(post.Image.Url), Caption: caption}
-		err = ctx.SendAlbum(telebot.Album{photo}, menu)
-		if err != nil {
-			return fmt.Errorf("could not send response\n url: %v\n error: %v", post.Image.Url, err)
-		}
-		return nil
-	} else if post.ContentType == "gif" {
-		gif := &telebot.Animation{File: telebot.FromURL(post.Image.Url), Caption: caption}
-		err = ctx.Send(gif, menu)
-		if err != nil {
-			return fmt.Errorf("could not send response\n url: %v\n error: %v", post.Image.Url, err)
+	storeFileId := func(postId string, fileId string) error {
+		switch post.ContentType {
+		case "video":
+			return s.store.SetVideoFileId(context.Background(), db.SetVideoFileIdParams{Post: postId, TgFileID: fileId})
+		default:
+			return s.store.SetImageFileId(context.Background(), db.SetImageFileIdParams{Post: postId, TgFileID: fileId})
 		}
 	}
 
-	video := &telebot.Video{
-		File:      telebot.FromURL(post.Video.Url),
+	switch post.ContentType {
+	case "image":
+		var file telebot.File
+		if post.Image.TgFileID != "" {
+			hasTGFileId = true
+			file = telebot.File{FileID: post.Image.TgFileID}
+		} else {
+			file = telebot.FromURL(post.Image.Url)
+		}
+		toSend = &telebot.Photo{File: file, Caption: caption}
+	case "gif":
+		var file telebot.File
+		if post.Image.TgFileID != "" {
+			hasTGFileId = true
+			file = telebot.File{FileID: post.Image.TgFileID}
+		} else {
+			file = telebot.FromURL(post.Image.Url)
+		}
+		toSend = &telebot.Animation{File: file, Caption: caption}
+	case "video":
+		var file telebot.File
+		if post.Video.TgFileID != "" {
+			hasTGFileId = true
+			file = telebot.File{FileID: post.Video.TgFileID}
+		} else {
+			file = telebot.FromURL(post.Video.Url)
+		}
+		toSend = constructVideo(post, caption, file)
+
+	default:
+		return fmt.Errorf("unknown content type: %v postId: %v", post.ContentType, post.ID)
+	}
+
+	err = ctx.Send(toSend, menu)
+	if err != nil {
+		ctx.Send("Please try again later", menu)
+		return fmt.Errorf("could not send response. post: %v, error: %v", post.ID, err)
+	}
+
+	fileId := toSend.MediaFile().FileID
+
+	if !hasTGFileId && fileId != "" {
+		err = storeFileId(post.ID, fileId)
+		if err != nil {
+			fmt.Printf("could not update fileId: %v ", err)
+		}
+	}
+
+	return nil
+}
+
+func constructVideo(post db.FullPost, caption string, file telebot.File) *telebot.Video {
+	return &telebot.Video{
+		File:      file,
 		Caption:   caption,
 		Streaming: true,
 		Width:     int(post.Video.Width),
 		Height:    int(post.Video.Height),
 	}
-
-	err = ctx.SendAlbum(telebot.Album{video}, menu)
-	if err != nil {
-		return fmt.Errorf("could not send response\n url: %v\n error: %v", post.Video, err)
-	}
-
-	return nil
 }
